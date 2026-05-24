@@ -18,7 +18,7 @@ class CheckoutController extends Controller
             'items' => ['required', 'array', 'min:1'],
             'items.*.listing_id' => ['required', 'integer', 'exists:product_listings,id'],
             'items.*.quantity' => ['required', 'integer', 'min:1', 'max:99'],
-            'payment_method' => ['nullable', 'string', 'max:50'],
+            'payment_method' => ['nullable', 'string', 'in:cod,gcash,bank_transfer'],
         ]);
 
         $user = $request->user();
@@ -84,9 +84,9 @@ class CheckoutController extends Controller
 
             $payment = Payment::create([
                 'order_id' => $order->id,
-                'method' => $data['payment_method'] ?? 'card',
-                'provider' => 'Simulated Checkout',
-                'reference_number' => 'SIM-' . now()->format('YmdHis') . '-' . $order->id,
+                'method' => $data['payment_method'] ?? 'cod',
+                'provider' => 'Manual Checkout',
+                'reference_number' => 'SIM-'.now()->format('YmdHis').'-'.$order->id,
                 'amount' => $total,
                 'status' => 'paid',
                 'paid_at' => now(),

@@ -3,7 +3,7 @@
 import * as React from "react"
 import { router, usePage } from "@inertiajs/react"
 import { useCallback, useMemo, useState } from "react"
-import { Plus, User, Calendar, Hash, ShoppingCart } from "lucide-react"
+import { Plus, User, Calendar, Hash, ShoppingCart, CheckCircle2, Circle, XCircle, Loader2 } from "lucide-react"
 import { AppSidebar } from "@/components/app-sidebar"
 import {
   Breadcrumb, BreadcrumbItem, BreadcrumbLink,
@@ -78,6 +78,157 @@ const STATUS_STYLES: Record<string, string> = {
 }
 
 /* -------------------------------------------------------------------------- */
+/*                         STATUS TRANSITION MAP                              */
+/* -------------------------------------------------------------------------- */
+
+// What status comes next for each status (null = terminal, no forward step)
+const NEXT_STATUS: Record<string, string | null> = {
+  Pending:    "Processing",
+  Processing: "Assembling",
+  Assembling: "Ready",
+  Ready:      "Delivered",
+  Delivered:  null,
+  Cancelled:  null,
+}
+
+// Which statuses can still be cancelled
+const CAN_CANCEL = new Set(["Pending", "Processing", "Assembling"])
+
+// Human-readable action labels for the forward button
+const NEXT_LABEL: Record<string, string> = {
+  Pending:    "Start Processing",
+  Processing: "Mark as Assembling",
+  Assembling: "Mark as Ready",
+  Ready:      "Mark as Delivered",
+}
+
+/* -------------------------------------------------------------------------- */
+/*                            ORDER PROGRESS TRACKER                          */
+/* -------------------------------------------------------------------------- */
+
+const PROGRESS_STEPS = ["Processing", "Assembling", "Ready", "Delivered"] as const
+type ProgressStep = typeof PROGRESS_STEPS[number]
+
+const STEP_META: Record<ProgressStep, { label: string; description: string; color: string; dot: string; line: string; ring: string }> = {
+  Processing: {
+    label: "Processing",
+    description: "Order confirmed & being prepared",
+    color: "text-orange-600 dark:text-orange-400",
+    dot:   "bg-orange-500",
+    line:  "bg-orange-400",
+    ring:  "ring-orange-300",
+  },
+  Assembling: {
+    label: "Assembling",
+    description: "Items are being packed together",
+    color: "text-blue-600 dark:text-blue-400",
+    dot:   "bg-blue-500",
+    line:  "bg-blue-400",
+    ring:  "ring-blue-300",
+  },
+  Ready: {
+    label: "Ready",
+    description: "Order is ready for pickup / dispatch",
+    color: "text-green-600 dark:text-green-400",
+    dot:   "bg-green-500",
+    line:  "bg-green-400",
+    ring:  "ring-green-300",
+  },
+  Delivered: {
+    label: "Delivered",
+    description: "Order successfully delivered",
+    color: "text-emerald-600 dark:text-emerald-400",
+    dot:   "bg-emerald-500",
+    line:  "bg-emerald-400",
+    ring:  "ring-emerald-300",
+  },
+}
+
+function OrderProgressTracker({ status }: { status: string }) {
+  const isCancelled = status === "Cancelled"
+  const currentIndex = PROGRESS_STEPS.indexOf(status as ProgressStep)
+
+  if (isCancelled) {
+    return (
+      <div className="rounded-xl border border-red-200 bg-red-50 dark:bg-red-500/10 dark:border-red-500/20 px-4 py-3 flex items-center gap-3">
+        <XCircle className="h-5 w-5 text-red-500 shrink-0" />
+        <div>
+          <p className="text-sm font-semibold text-red-700 dark:text-red-400">Order Cancelled</p>
+          <p className="text-xs text-red-500 dark:text-red-400/70 mt-0.5">
+            This order has been cancelled and will not be processed further.
+          </p>
+        </div>
+      </div>
+    )
+  }
+
+  return (
+    <div className="rounded-xl border bg-muted/30 px-4 py-4">
+      <p className="text-xs font-medium text-muted-foreground uppercase tracking-wider mb-4">Order Progress</p>
+
+      <div className="flex items-start gap-0">
+        {PROGRESS_STEPS.map((step, idx) => {
+          const isDone    = currentIndex > idx
+          const isCurrent = currentIndex === idx
+          const meta      = STEP_META[step]
+          const isLast    = idx === PROGRESS_STEPS.length - 1
+
+          return (
+            <div key={step} className="flex flex-col items-center flex-1">
+              {/* Connector row */}
+              <div className="flex items-center w-full">
+                {idx > 0 && (
+                  <div className={`h-0.5 flex-1 transition-colors duration-300 ${
+                    isDone || isCurrent ? meta.line : "bg-border"
+                  }`} />
+                )}
+
+                {/* Step dot */}
+                <div className={`relative flex items-center justify-center rounded-full shrink-0 transition-all duration-300 ${
+                  isDone
+                    ? `h-7 w-7 ${meta.dot}`
+                    : isCurrent
+                    ? `h-8 w-8 ring-4 ring-offset-1 ring-offset-background ${meta.dot} ${meta.ring}`
+                    : "h-6 w-6 bg-muted border-2 border-border"
+                }`}>
+                  {isDone ? (
+                    <CheckCircle2 className="h-4 w-4 text-white" />
+                  ) : isCurrent ? (
+                    <span className="h-2.5 w-2.5 rounded-full bg-white animate-pulse" />
+                  ) : (
+                    <Circle className="h-3 w-3 text-muted-foreground/40" />
+                  )}
+                </div>
+
+                {!isLast && (
+                  <div className={`h-0.5 flex-1 transition-colors duration-300 ${
+                    isDone ? STEP_META[PROGRESS_STEPS[idx + 1]].line : "bg-border"
+                  }`} />
+                )}
+              </div>
+
+              {/* Label */}
+              <div className="mt-2 text-center px-1">
+                <p className={`text-xs font-semibold ${
+                  isDone || isCurrent ? meta.color : "text-muted-foreground/50"
+                }`}>
+                  {meta.label}
+                </p>
+                {isCurrent && (
+                  <p className="text-[10px] text-muted-foreground mt-0.5 leading-tight">
+                    {meta.description}
+                  </p>
+                )}
+              </div>
+            </div>
+          )
+        })}
+      </div>
+    </div>
+  )
+}
+
+/* -------------------------------------------------------------------------- */
 /*                                COMPONENTS                                  */
 /* -------------------------------------------------------------------------- */
 
@@ -99,7 +250,6 @@ function FilterBar({
   onSelect: (status: string) => void
 }) {
   const statuses = ["All", ...Object.keys(STATUS_STYLES)]
-
   return (
     <div className="flex flex-wrap gap-2">
       {statuses.map(status => (
@@ -117,36 +267,23 @@ function FilterBar({
   )
 }
 
-function NextStepActions({ status }: { status: string }) {
-  const actions: Record<string, { label: string; variant: "default" | "outline" | "destructive" }[]> = {
-    Pending:    [{ label: "Start processing",       variant: "default" }, { label: "Cancel order", variant: "destructive" }],
-    Processing: [{ label: "Mark as assembling",     variant: "default" }, { label: "Cancel order", variant: "destructive" }],
-    Assembling: [{ label: "Mark as ready",          variant: "default" }, { label: "Cancel order", variant: "destructive" }],
-    Ready:      [{ label: "Mark as delivered",      variant: "default" }],
-    Delivered:  [{ label: "Delivered — no actions", variant: "outline" }],
-    Cancelled:  [{ label: "Cancelled — no actions", variant: "outline" }],
-  }
-
-  return (
-    <>
-      {(actions[status] ?? []).map(({ label, variant }) => (
-        <Button key={label} variant={variant} size="sm" className="flex-1">
-          {label}
-        </Button>
-      ))}
-    </>
-  )
-}
+/* -------------------------------------------------------------------------- */
+/*                               ORDER MODAL                                  */
+/* -------------------------------------------------------------------------- */
 
 function OrderModal({
   order,
   open,
   onClose,
+  onStatusChange,
 }: {
   order: Order | null
   open: boolean
   onClose: () => void
+  onStatusChange: (orderId: number, newStatus: string) => void
 }) {
+  const [loading, setLoading] = useState<"next" | "cancel" | null>(null)
+
   if (!order) return null
 
   const fields = [
@@ -155,9 +292,35 @@ function OrderModal({
     { icon: Calendar, label: "Date",       value: order.date },
   ]
 
+  const nextStatus  = NEXT_STATUS[order.status]
+  const canCancel   = CAN_CANCEL.has(order.status)
+  const nextLabel   = NEXT_LABEL[order.status]
+  const isTerminal  = order.status === "Delivered" || order.status === "Cancelled"
+
+  // PUT /admin/orders/{order}/status
+  function updateStatus(newStatus: string, type: "next" | "cancel") {
+    setLoading(type)
+    router.put(
+      `/admin/orders/${order.id}/status`,
+      { status: newStatus.toLowerCase() },
+      {
+        preserveScroll: true,
+        preserveState: true,
+        only: ["orders"],
+        onSuccess: () => {
+          onStatusChange(order.id, newStatus)
+          setLoading(null)
+        },
+        onError: () => {
+          setLoading(null)
+        },
+      },
+    )
+  }
+
   return (
     <Dialog open={open} onOpenChange={onClose}>
-      <DialogContent className="sm:max-w-lg">
+      <DialogContent className="sm:max-w-xl max-h-[90vh] overflow-y-auto">
         <DialogHeader>
           <DialogTitle>Order {order.order_code}</DialogTitle>
           <DialogDescription>Order details and current status</DialogDescription>
@@ -165,11 +328,14 @@ function OrderModal({
 
         <div className="space-y-4 pt-2">
 
-          {/* Status */}
+          {/* Status badge */}
           <div className="flex items-center justify-between py-2 border-b">
             <span className="text-sm text-muted-foreground">Status</span>
             <StatusBadge status={order.status} />
           </div>
+
+          {/* Progress tracker */}
+          <OrderProgressTracker status={order.status} />
 
           {/* Info fields */}
           {fields.map(({ icon: Icon, label, value }) => (
@@ -220,16 +386,62 @@ function OrderModal({
               </Table>
             </div>
 
-            {/* Total row */}
+            {/* Total */}
             <div className="flex items-center justify-between mt-3 px-1">
               <span className="text-sm text-muted-foreground">Total</span>
               <span className="text-sm font-semibold">₱ {Number(order.total).toFixed(2)}</span>
             </div>
           </div>
 
-          {/* Next step actions */}
+          {/* ── Action buttons ── */}
           <div className="flex gap-2 pt-4 border-t">
-            <NextStepActions status={order.status} />
+            {isTerminal ? (
+              /* Terminal state — show a disabled pill so the row is never empty */
+              <Button variant="outline" size="sm" disabled className="flex-1 opacity-50">
+                {order.status === "Delivered" ? "Order delivered — no further actions" : "Order cancelled — no further actions"}
+              </Button>
+            ) : (
+              <>
+                {/* Forward / next-step button */}
+                {nextStatus && (
+                  <Button
+                    size="sm"
+                    className="flex-1"
+                    disabled={loading !== null}
+                    onClick={() => updateStatus(nextStatus, "next")}
+                  >
+                    {loading === "next" ? (
+                      <>
+                        <Loader2 className="h-3.5 w-3.5 mr-1.5 animate-spin" />
+                        Updating…
+                      </>
+                    ) : (
+                      nextLabel
+                    )}
+                  </Button>
+                )}
+
+                {/* Cancel button — only when cancellation is still allowed */}
+                {canCancel && (
+                  <Button
+                    variant="destructive"
+                    size="sm"
+                    className="flex-1"
+                    disabled={loading !== null}
+                    onClick={() => updateStatus("Cancelled", "cancel")}
+                  >
+                    {loading === "cancel" ? (
+                      <>
+                        <Loader2 className="h-3.5 w-3.5 mr-1.5 animate-spin" />
+                        Cancelling…
+                      </>
+                    ) : (
+                      "Cancel order"
+                    )}
+                  </Button>
+                )}
+              </>
+            )}
           </div>
 
         </div>
@@ -251,13 +463,20 @@ export default function Orders() {
     [page.url],
   )
 
-  // Read active filter from URL so it survives page navigation
   const activeFilter = queryParams.get("status") ?? "All"
   const perPage = Number(orders?.per_page ?? 25)
 
+  // selectedOrder is kept in local state; we update it optimistically on status change
   const [selectedOrder, setSelectedOrder] = useState<Order | null>(null)
 
-  /* ── page number buttons (window of 5) ── */
+  // Called by the modal after a successful status PUT — updates both the modal
+  // and the matching row in the table instantly (optimistic UI)
+  const handleStatusChange = useCallback((orderId: number, newStatus: string) => {
+    setSelectedOrder(prev =>
+      prev && prev.id === orderId ? { ...prev, status: newStatus } : prev,
+    )
+  }, [])
+
   const pageNumbers = useMemo(() => {
     const current = orders?.current_page ?? 1
     const last    = orders?.last_page    ?? 1
@@ -266,7 +485,6 @@ export default function Orders() {
     return Array.from({ length: end - start + 1 }, (_, i) => start + i)
   }, [orders?.current_page, orders?.last_page])
 
-  /* ── navigation helper (mirrors payments) ── */
   const visitOrders = useCallback(
     (overrides: { page?: number; perPage?: number; status?: string } = {}) => {
       const nextPage    = overrides.page    ?? orders?.current_page ?? 1
@@ -278,7 +496,6 @@ export default function Orders() {
         data: {
           page:     nextPage,
           per_page: nextPerPage,
-          // Only send status param when it's not "All" — keeps URLs clean
           ...(nextStatus !== "All" ? { status: nextStatus } : {}),
         },
         only: ["orders"],
@@ -290,7 +507,6 @@ export default function Orders() {
     [orders?.current_page, perPage, activeFilter],
   )
 
-  /* ── filter pill counts (from current page data) ── */
   const counts = useMemo(() => {
     const all = orders?.data ?? []
     const result: Record<string, number> = { All: orders?.total ?? all.length }
@@ -299,11 +515,6 @@ export default function Orders() {
     })
     return result
   }, [orders])
-
-  const handleFilterSelect = (status: string) => {
-    // Reset to page 1 whenever the status filter changes
-    visitOrders({ status, page: 1 })
-  }
 
   return (
     <SidebarProvider>
@@ -333,7 +544,7 @@ export default function Orders() {
           <FilterBar
             active={activeFilter}
             counts={counts}
-            onSelect={handleFilterSelect}
+            onSelect={(status) => visitOrders({ status, page: 1 })}
           />
 
           <Card className="rounded-2xl shadow-sm">
@@ -373,38 +584,45 @@ export default function Orders() {
                         </TableCell>
                       </TableRow>
                     ) : (
-                      (orders?.data ?? []).map(order => (
-                        <TableRow key={order.id}>
-                          <TableCell className="font-medium">{order.order_code}</TableCell>
-                          <TableCell>{order.customer_name}</TableCell>
-                          <TableCell>{order.no_of_items}</TableCell>
-                          <TableCell>₱ {Number(order.total).toFixed(2)}</TableCell>
-                          <TableCell>{order.date}</TableCell>
-                          <TableCell><StatusBadge status={order.status} /></TableCell>
-                          <TableCell>
-                            <Button
-                              variant="ghost"
-                              size="sm"
-                              onClick={() => setSelectedOrder(order)}
-                            >
-                              View
-                            </Button>
-                          </TableCell>
-                        </TableRow>
-                      ))
+                      (orders?.data ?? []).map(order => {
+                        // Show the optimistic status if this row is open in the modal
+                        const displayStatus =
+                          selectedOrder?.id === order.id
+                            ? selectedOrder.status
+                            : order.status
+
+                        return (
+                          <TableRow key={order.id}>
+                            <TableCell className="font-medium">{order.order_code}</TableCell>
+                            <TableCell>{order.customer_name}</TableCell>
+                            <TableCell>{order.no_of_items}</TableCell>
+                            <TableCell>₱ {Number(order.total).toFixed(2)}</TableCell>
+                            <TableCell>{order.date}</TableCell>
+                            <TableCell><StatusBadge status={displayStatus} /></TableCell>
+                            <TableCell>
+                              <Button
+                                variant="ghost"
+                                size="sm"
+                                onClick={() => setSelectedOrder(order)}
+                              >
+                                View
+                              </Button>
+                            </TableCell>
+                          </TableRow>
+                        )
+                      })
                     )}
                   </TableBody>
                 </Table>
               </div>
 
-              {/* ── Pagination — mirrors Payments page ── */}
+              {/* Pagination */}
               <div className="flex flex-col gap-3 border-t pt-4 md:flex-row md:items-center md:justify-between">
                 <div className="text-sm text-muted-foreground">
                   Showing {orders?.from ?? 0}–{orders?.to ?? 0} of {orders?.total ?? 0} orders
                 </div>
 
                 <div className="flex flex-col gap-3 sm:flex-row sm:items-center">
-                  {/* Rows per page */}
                   <div className="flex items-center gap-2">
                     <span className="text-sm text-muted-foreground">Rows per page</span>
                     <Select
@@ -422,7 +640,6 @@ export default function Orders() {
                     </Select>
                   </div>
 
-                  {/* Page buttons */}
                   <div className="flex items-center gap-1">
                     <Button
                       size="sm"
@@ -465,6 +682,7 @@ export default function Orders() {
         order={selectedOrder}
         open={!!selectedOrder}
         onClose={() => setSelectedOrder(null)}
+        onStatusChange={handleStatusChange}
       />
 
     </SidebarProvider>

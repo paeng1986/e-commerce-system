@@ -84,6 +84,7 @@ Route::controller(AdminController::class)
         Route::get('/customers', 'customers')->name('customers');
         Route::get('/categories', 'categories')->name('categories');
         Route::get('/orders', 'orders')->name('orders');
+        Route::put('/orders/{order}/status', 'updateOrderStatus')->name('orders.status.update');
         Route::get('/payments-and-billing', 'payments_billing')->name('payments-and-billing');
         Route::get('/inventory', 'inventory')->name('inventory');
         Route::get('/products', 'products')->name('products');

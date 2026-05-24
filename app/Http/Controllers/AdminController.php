@@ -2,11 +2,12 @@
 
 namespace App\Http\Controllers;
 
+use App\Models\Order;
+use App\Services\OrderService;
+use App\Services\PaymentBillingService;
 use App\Services\ProductCategoryService;
 use App\Services\ProductListingService;
 use App\Services\ProductService;
-use App\Services\OrderService;
-use App\Services\PaymentBillingService;
 use Illuminate\Http\Request;
 use Inertia\Inertia;
 
@@ -45,13 +46,26 @@ class AdminController extends Controller
         $perPage = $request->integer('per_page', 25);
         $perPage = in_array($perPage, [10, 25, 50, 100], true) ? $perPage : 25;
         $search = $request->string('search')->trim()->toString();
+        $status = $request->string('status')->trim()->toString();
 
         $orders = $order->paginate(
             $perPage,
             $search ?: null,
+            $status ?: null,
         );
 
         return Inertia::render('admin/orders', compact('orders'));
+    }
+
+    public function updateOrderStatus(Request $request, OrderService $orderService, Order $order)
+    {
+        $data = $request->validate([
+            'status' => ['required', 'string', 'in:'.implode(',', OrderService::STATUSES)],
+        ]);
+
+        $orderService->updateStatus($order, $data['status']);
+
+        return back()->with('success', 'Order status updated.');
     }
 
     public function payments_billing(Request $request, PaymentBillingService $payment)
@@ -128,8 +142,12 @@ class AdminController extends Controller
         return Inertia::render('admin/listing', compact('product'));
     }
 
-    public function pc_builder(Request $request)
+    public function pc_builder(
+        Request $request, 
+        ProductService $product
+    )
     {
-        return Inertia::render('admin/pc_builder');
+        $products = $product->get();
+        return Inertia::render('admin/pc_builder', compact('products'));
     }
 }

@@ -24,7 +24,7 @@ import {
 } from "@/components/ui/breadcrumb"
 
 /* -------------------------------------------------------------------------- */
-/*                                   FORM                                     */
+/*                                   TYPES                                    */
 /* -------------------------------------------------------------------------- */
 
 type Product = {
@@ -39,52 +39,92 @@ type Product = {
   category?: string | null
 }
 
+/* -------------------------------------------------------------------------- */
+/*                                  HELPERS                                   */
+/* -------------------------------------------------------------------------- */
+
+/** Converts a title string into a URL-safe SEO slug. */
+const toSlug = (value: string) =>
+  value
+    .toLowerCase()
+    .trim()
+    .replace(/[^a-z0-9\s-]/g, "")   // strip non-alphanumeric (keep spaces/hyphens)
+    .replace(/\s+/g, "-")            // spaces → hyphens
+    .replace(/-{2,}/g, "-")          // collapse consecutive hyphens
+    .replace(/^-+|-+$/g, "")         // trim leading/trailing hyphens
+
+/** Builds the default listing title from brand + product name. */
+const buildTitle = (product: Product) =>
+  [product.brand, product.name].filter(Boolean).join(" ").trim()
+
+/* -------------------------------------------------------------------------- */
+/*                                   FORM                                     */
+/* -------------------------------------------------------------------------- */
+
 export default function ListingForm() {
   const { product } = usePage<{ product: Product }>().props
 
+  // Derive seeded defaults once so they're stable across renders
+  const defaultTitle = buildTitle(product)
+  const defaultPrice  = product.cost != null ? String(product.cost) : ""
+
   const { data, setData, post, processing, errors } = useForm({
-    product_id: product.id,
-    title: "",
-    selling_price: "",
-    sale_price: "",
-    description: "",
-    is_published: false,
-    seo_slug: "",
+    product_id:     product.id,
+    title:          defaultTitle,
+    selling_price:  defaultPrice,
+    sale_price:     defaultPrice,
+    description:    "",
+    is_published:   false,
+    seo_slug:       toSlug(defaultTitle),
     featured_image: [] as File[],
   })
 
+  /* ---- keep slug in sync with title (only while user hasn't manually overridden) ---- */
+  const slugManuallyEdited = React.useRef(false)
+
+  const handleTitleChange = (value: string) => {
+    setData((prev) => ({
+      ...prev,
+      title:    value,
+      // Only auto-update slug if the user hasn't touched it themselves
+      seo_slug: slugManuallyEdited.current ? prev.seo_slug : toSlug(value),
+    }))
+  }
+
+  const handleSlugChange = (value: string) => {
+    slugManuallyEdited.current = true
+    setData("seo_slug", value)
+  }
+
+  /* ---- image helpers ---- */
   const addImages = (files: FileList | null) => {
     if (!files?.length) return
-
-    setData("featured_image", [
-      ...data.featured_image,
-      ...Array.from(files),
-    ])
+    setData("featured_image", [...data.featured_image, ...Array.from(files)])
   }
 
   const removeImage = (index: number) => {
-    setData(
-      "featured_image",
-      data.featured_image.filter((_, i) => i !== index)
-    )
+    setData("featured_image", data.featured_image.filter((_, i) => i !== index))
   }
 
+  /* ---- submit ---- */
   const handleSubmit = (e: React.FormEvent) => {
     e.preventDefault()
-    post("/admin/listing", {
-      forceFormData: true,
-    })
+    post("/admin/listing", { forceFormData: true })
   }
 
+  /* ---- currency display helper (sidebar only) ---- */
   const formatCurrency = (value?: number | string | null) => {
     const amount = Number(value ?? 0)
-
     return new Intl.NumberFormat("en-PH", {
-      style: "currency",
-      currency: "PHP",
+      style:              "currency",
+      currency:           "PHP",
       maximumFractionDigits: 2,
     }).format(Number.isFinite(amount) ? amount : 0)
   }
+
+  /* -------------------------------------------------------------------------- */
+  /*                                  RENDER                                    */
+  /* -------------------------------------------------------------------------- */
 
   return (
     <SidebarProvider>
@@ -125,12 +165,12 @@ export default function ListingForm() {
             <CardContent>
               <form onSubmit={handleSubmit} className="space-y-6">
 
-                {/* TITLE */}
+                {/* TITLE — seeded from brand + name */}
                 <div className="space-y-2">
                   <Label>Title</Label>
                   <Input
                     value={data.title}
-                    onChange={(e) => setData("title", e.target.value)}
+                    onChange={(e) => handleTitleChange(e.target.value)}
                     placeholder="e.g. RTX 4060 Gaming Bundle"
                   />
                   {errors.title && (
@@ -138,7 +178,7 @@ export default function ListingForm() {
                   )}
                 </div>
 
-                {/* PRICES */}
+                {/* PRICES — both seeded from product.cost */}
                 <div className="grid grid-cols-2 gap-4">
                   <div className="space-y-2">
                     <Label>Selling Price</Label>
@@ -147,14 +187,10 @@ export default function ListingForm() {
                       min={0}
                       step="0.01"
                       value={data.selling_price}
-                      onChange={(e) =>
-                        setData("selling_price", e.target.value)
-                      }
+                      onChange={(e) => setData("selling_price", e.target.value)}
                     />
                     {errors.selling_price && (
-                      <p className="text-xs text-red-500">
-                        {errors.selling_price}
-                      </p>
+                      <p className="text-xs text-red-500">{errors.selling_price}</p>
                     )}
                   </div>
 
@@ -182,20 +218,21 @@ export default function ListingForm() {
                     placeholder="Short description of the product..."
                   />
                   {errors.description && (
-                    <p className="text-xs text-red-500">
-                      {errors.description}
-                    </p>
+                    <p className="text-xs text-red-500">{errors.description}</p>
                   )}
                 </div>
 
-                {/* SEO SLUG */}
+                {/* SEO SLUG — auto-derived from title; editable */}
                 <div className="space-y-2">
                   <Label>SEO Slug</Label>
                   <Input
                     value={data.seo_slug}
-                    onChange={(e) => setData("seo_slug", e.target.value)}
+                    onChange={(e) => handleSlugChange(e.target.value)}
                     placeholder="auto-generated-or-custom-slug"
                   />
+                  <p className="text-xs text-muted-foreground">
+                    Auto-generated from title. Edit to override.
+                  </p>
                   {errors.seo_slug && (
                     <p className="text-xs text-red-500">{errors.seo_slug}</p>
                   )}
@@ -232,9 +269,7 @@ export default function ListingForm() {
                     ))}
                   </div>
                   {errors.featured_image && (
-                    <p className="text-xs text-red-500">
-                      {errors.featured_image}
-                    </p>
+                    <p className="text-xs text-red-500">{errors.featured_image}</p>
                   )}
                 </div>
 
@@ -272,6 +307,7 @@ export default function ListingForm() {
             </CardContent>
           </Card>
 
+          {/* SIDEBAR — Product Details (unchanged) */}
           <aside className="space-y-4 lg:sticky lg:top-4 lg:self-start">
             <Card>
               <CardHeader>

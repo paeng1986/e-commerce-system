@@ -96,6 +96,7 @@ interface ServerUser {
 }
 
 export type StorefrontPage = "landing" | "browse" | "product" | "wishlist" | "checkout" | "login" | "register" | "portal";
+type PaymentMethod = "cod" | "gcash" | "bank_transfer";
 
 // ─── DATA ────────────────────────────────────────────────────────────────────
 
@@ -113,6 +114,11 @@ const PRODUCTS: Product[] = [
 
 const CATEGORIES: string[] = ["All", "Laptops", "Desktops", "Tablets", "Audio", "Cameras", "Wearables", "Gaming"];
 const STEPS: string[] = ["Cart", "Checkout", "Payment", "Confirmation", "Tracking", "Delivery"];
+const PAYMENT_METHOD_OPTIONS: { value: PaymentMethod; label: string; detail: string }[] = [
+  { value: "cod", label: "COD", detail: "Pay in cash when your order is delivered." },
+  { value: "gcash", label: "Manual GCash", detail: "Send payment manually after order confirmation." },
+  { value: "bank_transfer", label: "Manual bank transfer", detail: "Transfer to the bank account details provided after checkout." },
+];
 
 const toCustomerUser = (serverUser?: ServerUser | null): User | null => {
   if (!serverUser || serverUser.role !== "customer") {
@@ -869,6 +875,8 @@ interface CheckoutPageProps {
   currentUser: User | null;
   completedOrder: CompletedOrder | null;
   isPlacingOrder: boolean;
+  selectedPaymentMethod: PaymentMethod;
+  setSelectedPaymentMethod: (m: PaymentMethod) => void;
   placeOrder: () => void;
   removeFromCart: (id: number) => void;
   updateQty: (id: number, qty: number) => void;
@@ -880,7 +888,7 @@ interface CheckoutPageProps {
   setPage: (p: StorefrontPage) => void;
   notify: (msg: string, type?: "success" | "error") => void;
 }
-const CheckoutPage: React.FC<CheckoutPageProps> = ({ checkoutStep, setCheckoutStep, cart, completedCart, cartTotal, cartCount, orderNum, currentUser, completedOrder, isPlacingOrder, placeOrder, removeFromCart, updateQty, returnReason, setReturnReason, returnSubmitted, setReturnSubmitted, setCart, setPage, notify }) => {
+const CheckoutPage: React.FC<CheckoutPageProps> = ({ checkoutStep, setCheckoutStep, cart, completedCart, cartTotal, cartCount, orderNum, currentUser, completedOrder, isPlacingOrder, selectedPaymentMethod, setSelectedPaymentMethod, placeOrder, removeFromCart, updateQty, returnReason, setReturnReason, returnSubmitted, setReturnSubmitted, setCart, setPage, notify }) => {
   const confirmationCart = completedCart.length > 0 ? completedCart : cart;
   const confirmationTotal = completedOrder?.total ?? confirmationCart.reduce((sum, item) => sum + item.price * item.qty, 0);
 
@@ -1013,30 +1021,42 @@ const CheckoutPage: React.FC<CheckoutPageProps> = ({ checkoutStep, setCheckoutSt
           <div style={{ display: "flex", flexDirection: "column", gap: 20 }}>
             <div style={{ background: "#fff", borderRadius: 16, padding: "24px", border: "1px solid #E5E7EB" }}>
               <div style={{ fontWeight: 700, fontSize: 16, marginBottom: 18 }}>Payment Method</div>
-              <div style={{ display: "flex", gap: 10, marginBottom: 20 }}>
-                {([["💳 Credit Card", true], ["🏦 Bank Transfer", false], ["📱 Digital Wallet", false]] as [string, boolean][]).map(([label, active]) => (
-                  <button key={label} style={{ flex: 1, border: `2px solid ${active ? "#3B82F6" : "#E5E7EB"}`, borderRadius: 10, background: active ? "#EFF6FF" : "#fff", padding: "10px", fontSize: 13, fontWeight: 600, cursor: "pointer", color: active ? "#1D4ED8" : "#374151" }}>{label}</button>
-                ))}
+              <div style={{ display: "grid", gridTemplateColumns: "repeat(3, minmax(0, 1fr))", gap: 10, marginBottom: 20 }}>
+                {PAYMENT_METHOD_OPTIONS.map(option => {
+                  const active = selectedPaymentMethod === option.value;
+
+                  return (
+                    <button
+                      key={option.value}
+                      type="button"
+                      onClick={() => setSelectedPaymentMethod(option.value)}
+                      style={{ border: `2px solid ${active ? "#3B82F6" : "#E5E7EB"}`, borderRadius: 10, background: active ? "#EFF6FF" : "#fff", padding: "12px", fontSize: 13, fontWeight: 700, cursor: "pointer", color: active ? "#1D4ED8" : "#374151", textAlign: "left", minHeight: 92 }}
+                    >
+                      <div>{option.label}</div>
+                      <div style={{ marginTop: 6, fontSize: 11, fontWeight: 500, lineHeight: 1.4, color: active ? "#2563EB" : "#6B7280" }}>{option.detail}</div>
+                    </button>
+                  );
+                })}
               </div>
-              <div style={{ display: "grid", gridTemplateColumns: "1fr 1fr", gap: 14 }}>
-                <div style={{ gridColumn: "1/-1" }}>
-                  <label style={{ fontSize: 13, fontWeight: 600, color: "#374151", display: "block", marginBottom: 6 }}>Card Number</label>
-                  <input placeholder="1234 5678 9012 3456" style={{ ...STYLES.input, letterSpacing: 2, padding: "12px" }} />
-                </div>
-                <div>
-                  <label style={{ fontSize: 13, fontWeight: 600, color: "#374151", display: "block", marginBottom: 6 }}>Cardholder Name</label>
-                  <input placeholder="John Doe" style={{ ...STYLES.input, padding: "12px" }} />
-                </div>
-                <div style={{ display: "grid", gridTemplateColumns: "1fr 1fr", gap: 10 }}>
+              <div style={{ background: "#F8FAFC", borderRadius: 12, padding: "16px", border: "1px solid #E5E7EB" }}>
+                {selectedPaymentMethod === "cod" && (
                   <div>
-                    <label style={{ fontSize: 13, fontWeight: 600, color: "#374151", display: "block", marginBottom: 6 }}>Expiry</label>
-                    <input placeholder="MM/YY" style={{ ...STYLES.input, padding: "12px" }} />
+                    <div style={{ fontWeight: 700, color: "#111827", marginBottom: 6 }}>Cash on Delivery</div>
+                    <div style={{ fontSize: 13, color: "#4B5563", lineHeight: 1.6 }}>Prepare the exact amount when the courier delivers your order.</div>
                   </div>
+                )}
+                {selectedPaymentMethod === "gcash" && (
                   <div>
-                    <label style={{ fontSize: 13, fontWeight: 600, color: "#374151", display: "block", marginBottom: 6 }}>CVV</label>
-                    <input placeholder="123" style={{ ...STYLES.input, padding: "12px" }} type="password" maxLength={4} />
+                    <div style={{ fontWeight: 700, color: "#111827", marginBottom: 6 }}>Manual GCash payment</div>
+                    <div style={{ fontSize: 13, color: "#4B5563", lineHeight: 1.6 }}>After placing your order, send your payment manually and keep your GCash receipt for verification.</div>
                   </div>
-                </div>
+                )}
+                {selectedPaymentMethod === "bank_transfer" && (
+                  <div>
+                    <div style={{ fontWeight: 700, color: "#111827", marginBottom: 6 }}>Manual bank transfer</div>
+                    <div style={{ fontSize: 13, color: "#4B5563", lineHeight: 1.6 }}>Transfer the total manually after order confirmation and keep your bank receipt for verification.</div>
+                  </div>
+                )}
               </div>
             </div>
             <div style={{ background: "#F0FDF4", borderRadius: 10, padding: "12px 16px", display: "flex", alignItems: "center", gap: 10 }}>
@@ -1718,6 +1738,7 @@ export function NexVoltStorefront({ initialPage = "landing", productId, listings
   const [orderNum, setOrderNum] = useState<string>(`NV-${Math.floor(Math.random() * 90000 + 10000)}`);
   const [completedOrder, setCompletedOrder] = useState<CompletedOrder | null>(null);
   const [isPlacingOrder, setIsPlacingOrder] = useState<boolean>(false);
+  const [selectedPaymentMethod, setSelectedPaymentMethod] = useState<PaymentMethod>("cod");
   const [notification, setNotification] = useState<NotificationState | null>(null);
   const [quantity, setQuantity] = useState<number>(1);
   const [review, setReview] = useState<{ rating: number; text: string }>({ rating: 5, text: "" });
@@ -1812,7 +1833,7 @@ export function NexVoltStorefront({ initialPage = "landing", productId, listings
           "X-CSRF-TOKEN": csrfToken(),
         },
         body: JSON.stringify({
-          payment_method: "card",
+          payment_method: selectedPaymentMethod,
           items: cart.map(item => ({
             listing_id: item.listingId ?? item.id,
             quantity: item.qty,
@@ -1852,7 +1873,7 @@ export function NexVoltStorefront({ initialPage = "landing", productId, listings
     } finally {
       setIsPlacingOrder(false);
     }
-  }, [cart, cartCount, currentUser, notify, setPage]);
+  }, [cart, cartCount, currentUser, notify, selectedPaymentMethod, setPage]);
 
   const handleSetCurrentUser = useCallback((u: User | null) => setCurrentUser(u), []);
 
@@ -1914,7 +1935,8 @@ export function NexVoltStorefront({ initialPage = "landing", productId, listings
       {page === "checkout" && (
         <CheckoutPage checkoutStep={checkoutStep} setCheckoutStep={setCheckoutStep}
           cart={cart} completedCart={completedCart} cartTotal={cartTotal} cartCount={cartCount} orderNum={orderNum}
-          currentUser={currentUser} completedOrder={completedOrder} isPlacingOrder={isPlacingOrder} placeOrder={placeOrder}
+          currentUser={currentUser} completedOrder={completedOrder} isPlacingOrder={isPlacingOrder}
+          selectedPaymentMethod={selectedPaymentMethod} setSelectedPaymentMethod={setSelectedPaymentMethod} placeOrder={placeOrder}
           removeFromCart={removeFromCart} updateQty={updateQty}
           returnReason={returnReason} setReturnReason={setReturnReason}
           returnSubmitted={returnSubmitted} setReturnSubmitted={setReturnSubmitted}

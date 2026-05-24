@@ -25,16 +25,19 @@ class Order extends Model
         return $this->hasOne(Payment::class);
     }
 
-    public function getItemDataAttribute() {
+    public function getItemDataAttribute()
+    {
 
-        if(!$this->items) return [];
+        if (! $this->items) {
+            return [];
+        }
         $arr = [];
-        foreach($this->items as $item) {
+        foreach ($this->items as $item) {
             $arr[] = [
                 'product_name' => $item->product_name_snapshot,
                 'unit_price' => $item->unit_price_snapshot,
                 'quantity' => $item->quantity,
-                'subtotal' => $item->subtotal,
+                'subtotal' => $item->subtotal_snapshot,
             ];
         }
 
