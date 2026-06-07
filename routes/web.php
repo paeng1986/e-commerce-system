@@ -3,7 +3,9 @@
 use App\Http\Controllers\AdminController;
 use App\Http\Controllers\Auth\CustomerAuthController;
 use App\Http\Controllers\CheckoutController;
+use App\Http\Controllers\CustomerController;
 use App\Http\Controllers\Auth\LoginController;
+use App\Http\Controllers\PcBuildController;
 use App\Http\Controllers\ProductCategoryController;
 use App\Http\Controllers\ProductController;
 use App\Http\Controllers\ProductListingController;
@@ -112,6 +114,7 @@ Route::controller(ProductController::class)
         Route::get('/products/template', 'downloadTemplate');
         Route::post('/product', 'store');
         Route::put('/product/{id}', 'update');
+        Route::put('/inventory/{id}/stock', 'adjustStock')->name('inventory.stock.update');
 
         Route::post('/products/bulk-upload', 'bulkUpload');
 
@@ -123,6 +126,25 @@ Route::controller(ProductListingController::class)
     ->group(function () {
 
         Route::post('/listing', 'store')->name('listing.store');
+
+    });
+
+Route::controller(PcBuildController::class)
+    ->middleware(['auth','admin'])
+    ->prefix('admin')
+    ->group(function () {
+
+        Route::post('/pc-build', 'store')->name('pc-build.store');
+        Route::post('/pc-build-listing', 'storeListing')->name('pc-build-listing.store');
+
+    });
+
+Route::controller(CustomerController::class)
+    ->middleware(['auth','admin'])
+    ->prefix('admin')
+    ->group(function () {
+
+        Route::post('/customer', 'store')->name('customer.store');
 
     });
 

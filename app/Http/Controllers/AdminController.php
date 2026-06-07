@@ -3,8 +3,11 @@
 namespace App\Http\Controllers;
 
 use App\Models\Order;
+use App\Services\CustomerService;
+use App\Services\DashboardService;
 use App\Services\OrderService;
 use App\Services\PaymentBillingService;
+use App\Services\PcBuildService;
 use App\Services\ProductCategoryService;
 use App\Services\ProductListingService;
 use App\Services\ProductService;
@@ -18,19 +21,44 @@ class AdminController extends Controller
         return Inertia::render('auth/admin_login');
     }
 
-    public function dashboard(Request $request)
+    public function dashboard(Request $request, DashboardService $dashboard)
     {
-        return Inertia::render('admin/dashboard');
+        return Inertia::render('admin/dashboard', $dashboard->metrics());
     }
 
-    public function inventory(Request $request)
-    {
-        return Inertia::render('admin/inventory');
+    public function inventory(
+        Request $request,
+        ProductCategoryService $category,
+        ProductService $product
+    ) {
+        $perPage = $request->integer('per_page', 25);
+        $perPage = in_array($perPage, [10, 25, 50, 100], true) ? $perPage : 25;
+        $search = $request->string('search')->trim()->toString();
+        $inventoryCategory = $request->string('category', 'all')->trim()->toString();
+        $stockStatus = $request->string('stock', 'all')->trim()->toString();
+
+        $stats = $product->inventoryStats();
+        $categories = $category->get();
+        $products = $product->inventoryPaginate(
+            $perPage,
+            $search ?: null,
+            $inventoryCategory ?: 'all',
+            $stockStatus ?: 'all'
+        );
+
+        return Inertia::render('admin/inventory', compact('products', 'categories', 'stats'));
     }
 
-    public function customers(Request $request)
+    public function customers(Request $request, CustomerService $customer)
     {
-        return Inertia::render('admin/customers');
+        $perPage = $request->integer('per_page', 25);
+        $perPage = in_array($perPage, [10, 25, 50, 100], true) ? $perPage : 25;
+        $search = $request->string('search')->trim()->toString();
+
+        $stats = $customer->stats();
+        $customers = $customer->paginate($perPage, $search ?: null);
+
+        return Inertia::render('admin/customers', compact('customers', 'stats'));
     }
 
     public function categories(Request $request, ProductCategoryService $service)
@@ -143,11 +171,14 @@ class AdminController extends Controller
     }
 
     public function pc_builder(
-        Request $request, 
-        ProductService $product
+        Request $request,
+        ProductService $product,
+        PcBuildService $pcBuild
     )
     {
         $products = $product->get();
-        return Inertia::render('admin/pc_builder', compact('products'));
+        $builds = $pcBuild->get();
+
+        return Inertia::render('admin/pc_builder', compact('products', 'builds'));
     }
 }

@@ -64,4 +64,30 @@ class ProductController extends Controller
         return $this->service->bulkUpload($request);
     }
 
+    public function adjustStock($id, Request $request)
+    {
+        $data = $request->validate([
+            'stock' => ['required', 'integer', 'min:0'],
+        ]);
+
+        try {
+            $this->service->adjustStock($id, $data['stock']);
+
+            return redirect()
+                ->route('inventory')
+                ->with('success', 'Stock updated successfully.');
+        } catch (\Throwable $th) {
+            \Log::error(
+                'Stock Adjust Error: '.
+                $th->getMessage().
+                "\n".
+                $th->getTraceAsString()
+            );
+
+            return back()->withErrors([
+                'stock' => 'Failed to update stock.',
+            ]);
+        }
+    }
+
 }

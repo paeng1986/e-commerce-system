@@ -38,6 +38,11 @@ class User extends Authenticatable
         return $this->hasOne(UserProfile::class);
     }
 
+    public function orders()
+    {
+        return $this->hasMany(Order::class, 'customer_id', 'id');
+    }
+
     public function getNameAttribute() {
         if($this->profile)
             return $this->profile->first_name . " " . $this->profile->last_name;
