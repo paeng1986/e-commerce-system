@@ -4,6 +4,7 @@ namespace App\Http\Controllers;
 
 use App\Models\Order;
 use App\Models\Payment;
+use App\Models\PcBuildListing;
 use App\Models\ProductListing;
 use Illuminate\Http\JsonResponse;
 use Illuminate\Http\Request;
@@ -16,7 +17,8 @@ class CheckoutController extends Controller
     {
         $data = $request->validate([
             'items' => ['required', 'array', 'min:1'],
-            'items.*.listing_id' => ['required', 'integer', 'exists:product_listings,id'],
+            'items.*.listing_id' => ['required', 'integer'],
+            'items.*.kind' => ['nullable', 'string', 'in:product,pc_build'],
             'items.*.quantity' => ['required', 'integer', 'min:1', 'max:99'],
             'payment_method' => ['nullable', 'string', 'in:cod,gcash,bank_transfer'],
         ]);
@@ -29,27 +31,48 @@ class CheckoutController extends Controller
             ]);
         }
 
-        $quantities = collect($data['items'])
-            ->groupBy('listing_id')
-            ->map(fn ($items) => $items->sum('quantity'));
+        $items = collect($data['items']);
 
-        $listings = ProductListing::query()
+        $productQty = $items
+            ->filter(fn ($item) => ($item['kind'] ?? 'product') === 'product')
+            ->groupBy('listing_id')
+            ->map(fn ($group) => collect($group)->sum('quantity'));
+
+        $buildQty = $items
+            ->filter(fn ($item) => ($item['kind'] ?? 'product') === 'pc_build')
+            ->groupBy('listing_id')
+            ->map(fn ($group) => collect($group)->sum('quantity'));
+
+        $productListings = ProductListing::query()
             ->with('product.categories')
-            ->whereIn('id', $quantities->keys())
+            ->whereIn('id', $productQty->keys())
             ->where('is_published', true)
             ->get()
             ->keyBy('id');
 
-        if ($listings->count() !== $quantities->count()) {
+        $buildListings = PcBuildListing::query()
+            ->with('build')
+            ->whereIn('id', $buildQty->keys())
+            ->where('is_published', true)
+            ->get()
+            ->keyBy('id');
+
+        if (
+            $productListings->count() !== $productQty->count()
+            || $buildListings->count() !== $buildQty->count()
+        ) {
             throw ValidationException::withMessages([
                 'items' => 'One or more products are no longer available.',
             ]);
         }
 
-        $created = DB::transaction(function () use ($user, $quantities, $listings, $data) {
-            $subtotal = $listings->sum(function (ProductListing $listing) use ($quantities) {
-                return $this->listingPrice($listing) * $quantities[$listing->id];
-            });
+        $created = DB::transaction(function () use ($user, $productQty, $buildQty, $productListings, $buildListings, $data) {
+            $subtotal = $productListings->sum(
+                fn (ProductListing $listing) => $this->productPrice($listing) * $productQty[$listing->id]
+            ) + $buildListings->sum(
+                fn (PcBuildListing $listing) => $this->buildPrice($listing) * $buildQty[$listing->id]
+            );
+
             $tax = round($subtotal * 0.08, 2);
             $total = round($subtotal + $tax, 2);
 
@@ -61,9 +84,9 @@ class CheckoutController extends Controller
                 'status' => 'processing',
             ]);
 
-            foreach ($listings as $listing) {
-                $quantity = $quantities[$listing->id];
-                $unitPrice = $this->listingPrice($listing);
+            foreach ($productListings as $listing) {
+                $quantity = $productQty[$listing->id];
+                $unitPrice = $this->productPrice($listing);
 
                 $order->items()->create([
                     'product_id' => $listing->product_id,
@@ -74,10 +97,32 @@ class CheckoutController extends Controller
                     'subtotal_snapshot' => round($unitPrice * $quantity, 2),
                     'cost_snapshot' => $listing->product?->cost,
                     'metadata_snapshot' => [
+                        'kind' => 'product',
                         'sku' => $listing->product?->sku,
                         'brand' => $listing->product?->brand,
                         'category' => $listing->product?->category,
                         'featured_image' => $listing->featured_image,
+                    ],
+                ]);
+            }
+
+            foreach ($buildListings as $listing) {
+                $quantity = $buildQty[$listing->id];
+                $unitPrice = $this->buildPrice($listing);
+
+                $order->items()->create([
+                    'product_id' => null,
+                    'product_listing_id' => null,
+                    'product_name_snapshot' => $listing->title,
+                    'unit_price_snapshot' => $unitPrice,
+                    'quantity' => $quantity,
+                    'subtotal_snapshot' => round($unitPrice * $quantity, 2),
+                    'cost_snapshot' => null,
+                    'metadata_snapshot' => [
+                        'kind' => 'pc_build',
+                        'pc_build_listing_id' => $listing->id,
+                        'pc_build_id' => $listing->pc_build_id,
+                        'category' => 'PC Builds',
                     ],
                 ]);
             }
@@ -121,14 +166,17 @@ class CheckoutController extends Controller
         ], 201);
     }
 
-    private function listingPrice(ProductListing $listing): float
+    private function productPrice(ProductListing $listing): float
     {
         $salePrice = (float) $listing->sale_price;
 
-        if ($salePrice > 0) {
-            return $salePrice;
-        }
+        return $salePrice > 0 ? $salePrice : (float) $listing->selling_price;
+    }
 
-        return (float) $listing->selling_price;
+    private function buildPrice(PcBuildListing $listing): float
+    {
+        $salePrice = (float) $listing->sale_price;
+
+        return $salePrice > 0 ? $salePrice : (float) $listing->selling_price;
     }
 }

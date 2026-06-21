@@ -4,10 +4,13 @@ import type * as React from "react";
 
 // ─── TYPES ───────────────────────────────────────────────────────────────────
 
+type ListingKind = "product" | "pc_build";
+
 interface Product {
   id: number;
   listingId?: number;
   productId?: number | null;
+  kind: ListingKind;
   name: string;
   category: string;
   price: number;
@@ -22,7 +25,7 @@ interface Product {
 }
 
 interface ServerProduct {
-  id: number;
+  id?: number | null;
   sku?: string | null;
   name?: string | null;
   brand?: string | null;
@@ -33,6 +36,8 @@ interface ServerProduct {
 
 export interface ServerListing {
   id: number;
+  kind?: ListingKind | null;
+  source_id?: number | null;
   title?: string | null;
   selling_price?: number | string | null;
   sale_price?: number | string | null;
@@ -95,25 +100,22 @@ interface ServerUser {
   } | null;
 }
 
+interface ServerOrder {
+  id: number;
+  order_code: string;
+  status: string;
+  total: number;
+  no_of_items: number;
+  date: string | null;
+  items: { name: string; quantity: number; price: number }[];
+}
+
 export type StorefrontPage = "landing" | "browse" | "product" | "wishlist" | "checkout" | "login" | "register" | "portal";
 type PaymentMethod = "cod" | "gcash" | "bank_transfer";
 
 // ─── DATA ────────────────────────────────────────────────────────────────────
 
-const PRODUCTS: Product[] = [
-  { id: 1, name: "NexVolt ProBook X1", category: "Laptops", price: 1299, originalPrice: 1599, rating: 4.8, reviews: 342, stock: 12, badge: "Best Seller", img: "💻", specs: { CPU: "Intel Core i9-13900H", RAM: "32GB DDR5", Storage: "1TB NVMe SSD", Display: "14\" 2.8K OLED 120Hz", Battery: "86Wh", GPU: "RTX 4060" }, description: "The ultimate productivity powerhouse with OLED display and next-gen performance for professionals." },
-  { id: 2, name: "VoltStation Pro Desktop", category: "Desktops", price: 1899, originalPrice: 2199, rating: 4.9, reviews: 189, stock: 5, badge: "New", img: "🖥️", specs: { CPU: "AMD Ryzen 9 7950X", RAM: "64GB DDR5", Storage: "2TB NVMe SSD", GPU: "RTX 4080 16GB", PSU: "850W Platinum", Cooling: "360mm AIO" }, description: "Unmatched desktop performance for gaming, 3D rendering, and heavy workloads." },
-  { id: 3, name: "NexVolt AirPods Studio", category: "Audio", price: 249, originalPrice: 299, rating: 4.7, reviews: 891, stock: 50, badge: "Sale", img: "🎧", specs: { Type: "Over-ear ANC", "Battery Life": "36 hours", Connectivity: "Bluetooth 5.3", Driver: "40mm Dynamic", Codec: "LDAC, aptX HD", Weight: "250g" }, description: "Premium noise-cancelling headphones with audiophile-grade sound and all-day comfort." },
-  { id: 4, name: "VoltWatch Ultra S3", category: "Wearables", price: 449, originalPrice: 499, rating: 4.6, reviews: 523, stock: 28, badge: "New", img: "⌚", specs: { Display: "2.1\" LTPO AMOLED", Battery: "Up to 18 days", Health: "ECG, SpO2, Stress", GPS: "Dual-band", Water: "10 ATM", OS: "VoltOS 4" }, description: "Next-generation smartwatch with medical-grade health tracking and exceptional battery life." },
-  { id: 5, name: "NexVolt UltraTab X", category: "Tablets", price: 799, originalPrice: 899, rating: 4.8, reviews: 267, stock: 19, badge: "Best Seller", img: "📱", specs: { Chip: "NexChip M3", Display: "12.9\" Mini-LED", RAM: "16GB", Storage: "256GB", Camera: "12MP Ultra Wide", Battery: "10,758 mAh" }, description: "The most powerful tablet ever built, designed for creative professionals on the go." },
-  { id: 6, name: "VoltCam Pro 8K", category: "Cameras", price: 2499, originalPrice: 2999, rating: 4.9, reviews: 94, stock: 3, badge: "Limited", img: "📷", specs: { Sensor: "Full-Frame 45MP", Video: "8K @ 30fps", ISO: "100-51200", Stabilization: "7-stop IBIS", AF: "AI Subject Tracking", Mount: "VoltMount L" }, description: "Revolutionary 8K full-frame mirrorless camera with AI-powered autofocus." },
-  { id: 7, name: "NexVolt ThinkPad Slim", category: "Laptops", price: 899, originalPrice: 1099, rating: 4.5, reviews: 456, stock: 24, badge: "Sale", img: "💻", specs: { CPU: "Intel Core i7-1365U", RAM: "16GB LPDDR5", Storage: "512GB SSD", Display: "13.3\" IPS FHD", Battery: "72Wh", Weight: "1.1kg" }, description: "Ultra-portable business laptop with all-day battery life and legendary keyboard." },
-  { id: 8, name: "VoltSound Beam Pro", category: "Audio", price: 349, originalPrice: 399, rating: 4.7, reviews: 312, stock: 15, badge: "New", img: "🔊", specs: { Type: "Soundbar", Channels: "3.1.2 Atmos", Power: "450W", Connectivity: "eARC, Optical, BT", Sub: "8\" Wireless", Dimensions: "1100mm wide" }, description: "Cinema-quality Dolby Atmos soundbar with wireless subwoofer for immersive audio." },
-  { id: 9, name: "NexVolt GamingPad X", category: "Gaming", price: 699, originalPrice: 799, rating: 4.8, reviews: 731, stock: 9, badge: "Best Seller", img: "🎮", specs: { Display: "7\" IPS 144Hz", CPU: "AMD Ryzen Z1 Extreme", RAM: "16GB LPDDR5X", Storage: "512GB SSD", Battery: "50Wh", Controls: "Hall-effect joysticks" }, description: "Handheld gaming powerhouse running full PC titles anywhere you go." },
-];
-
-const CATEGORIES: string[] = ["All", "Laptops", "Desktops", "Tablets", "Audio", "Cameras", "Wearables", "Gaming"];
-const STEPS: string[] = ["Cart", "Checkout", "Payment", "Confirmation", "Tracking", "Delivery"];
+const STEPS: string[] = ["Cart", "Checkout", "Payment", "Confirmation"];
 const PAYMENT_METHOD_OPTIONS: { value: PaymentMethod; label: string; detail: string }[] = [
   { value: "cod", label: "COD", detail: "Pay in cash when your order is delivered." },
   { value: "gcash", label: "Manual GCash", detail: "Send payment manually after order confirmation." },
@@ -140,15 +142,24 @@ const toCustomerUser = (serverUser?: ServerUser | null): User | null => {
   };
 };
 
-const REVIEWS: Review[] = [
-  { user: "Alex M.", rating: 5, text: "Absolutely phenomenal device. Exceeded all my expectations. The display is stunning.", date: "2 days ago", verified: true },
-  { user: "Sarah K.", rating: 4, text: "Great performance and build quality. Battery could be slightly better but overall amazing.", date: "1 week ago", verified: true },
-  { user: "Daniel R.", rating: 5, text: "Best purchase I've made in years. Fast shipping, perfect packaging, works flawlessly.", date: "2 weeks ago", verified: true },
-];
-
 // ─── UTILITIES ───────────────────────────────────────────────────────────────
 
 const formatCurrency = (n: number): string => `P ${n.toLocaleString()}`;
+
+const orderStatusStyle = (status: string): { background: string; color: string } => {
+  switch (status.toLowerCase()) {
+    case "delivered":
+    case "ready":
+      return { background: "#DCFCE7", color: "#15803D" };
+    case "cancelled":
+      return { background: "#FEE2E2", color: "#B91C1C" };
+    case "assembling":
+    case "processing":
+      return { background: "#DBEAFE", color: "#1D4ED8" };
+    default: // pending and anything else
+      return { background: "#FEF3C7", color: "#92400E" };
+  }
+};
 
 const parseAmount = (value: number | string | null | undefined): number => {
   const amount = Number(value ?? 0);
@@ -211,24 +222,29 @@ const parseSpecs = (specs?: string | null): Record<string, string> => {
 };
 
 const listingToProduct = (listing: ServerListing): Product => {
+  const kind: ListingKind = listing.kind === "pc_build" ? "pc_build" : "product";
   const sellingPrice = parseAmount(listing.selling_price);
   const salePrice = parseAmount(listing.sale_price);
-  const activePrice = salePrice > 0 ? salePrice : sellingPrice;
-  const originalPrice = salePrice > 0 && sellingPrice > salePrice ? sellingPrice : activePrice;
+  const onSale = salePrice > 0 && salePrice < sellingPrice;
+  const activePrice = onSale ? salePrice : sellingPrice;
+  const originalPrice = onSale ? sellingPrice : activePrice;
+
+  const badge = kind === "pc_build" ? "PC Build" : onSale ? "Sale" : "Listed";
 
   return {
     id: listing.id,
-    listingId: listing.id,
+    listingId: listing.source_id ?? listing.id,
     productId: listing.product?.id ?? null,
+    kind,
     name: listing.title || listing.product?.name || "Untitled product",
-    category: listing.product?.category || listing.product?.brand || "Products",
+    category: kind === "pc_build" ? "PC Builds" : listing.product?.category || listing.product?.brand || "Products",
     price: activePrice,
     originalPrice,
     rating: 0,
     reviews: 0,
     stock: Number(listing.product?.stock ?? 0),
-    badge: salePrice > 0 && salePrice < sellingPrice ? "Sale" : "Listed",
-    img: firstImage(listing.featured_image),
+    badge,
+    img: kind === "pc_build" ? "🖥️" : firstImage(listing.featured_image),
     specs: parseSpecs(listing.product?.specs),
     description: listing.description || listing.product?.name || "No description available.",
   };
@@ -257,6 +273,31 @@ const csrfToken = (): string => {
   }
 
   return document.querySelector<HTMLMetaElement>('meta[name="csrf-token"]')?.content ?? "";
+};
+
+// ─── PERSISTENCE (cart + wishlist survive navigation/refresh) ─────────────────
+
+const STORAGE_KEYS = { cart: "nexvolt:cart", wishlist: "nexvolt:wishlist" } as const;
+
+const loadStored = <T,>(key: string, fallback: T): T => {
+  if (typeof window === "undefined") return fallback;
+
+  try {
+    const raw = window.localStorage.getItem(key);
+    return raw ? (JSON.parse(raw) as T) : fallback;
+  } catch {
+    return fallback;
+  }
+};
+
+const saveStored = (key: string, value: unknown): void => {
+  if (typeof window === "undefined") return;
+
+  try {
+    window.localStorage.setItem(key, JSON.stringify(value));
+  } catch {
+    /* storage full or unavailable — ignore */
+  }
 };
 
 const STYLES = {
@@ -293,7 +334,7 @@ const Stars: React.FC<StarsProps> = ({ rating, size = 14 }) => (
 
 interface BadgeProps { text: string; }
 const Badge: React.FC<BadgeProps> = ({ text }) => {
-  const colors: Record<string, string> = { "Best Seller": "#3B82F6", "New": "#10B981", "Sale": "#EF4444", "Limited": "#8B5CF6" };
+  const colors: Record<string, string> = { "Best Seller": "#3B82F6", "New": "#10B981", "Sale": "#EF4444", "Limited": "#8B5CF6", "PC Build": "#8B5CF6", "Listed": "#3B82F6" };
   return (
     <span style={{ background: colors[text] || "#6B7280", color: "#fff", fontSize: 10, fontWeight: 700, padding: "2px 8px", borderRadius: 4, textTransform: "uppercase", letterSpacing: 0.5 }}>
       {text}
@@ -370,27 +411,17 @@ const Notification: React.FC<NotificationProps> = ({ notification }) => {
 // ─── FOOTER ──────────────────────────────────────────────────────────────────
 
 const Footer: React.FC = () => (
-  <div style={{ background: "#0A0F1E", padding: "48px 60px 32px", color: "rgba(255,255,255,0.6)" }}>
-    <div style={{ display: "grid", gridTemplateColumns: "2fr 1fr 1fr 1fr", gap: 40, marginBottom: 40 }}>
-      <div>
-        <div style={{ fontFamily: "'Orbitron', sans-serif", fontSize: 22, fontWeight: 900, color: "#fff", marginBottom: 12 }}>
-          ⚡ Nex<span style={{ color: "#3B82F6" }}>Volt</span>
-        </div>
-        <p style={{ fontSize: 14, lineHeight: 1.7 }}>Your trusted destination for premium computers & electronics. Cutting-edge technology, unbeatable value.</p>
+  <div style={{ background: "#0A0F1E", padding: "40px 60px 32px", color: "rgba(255,255,255,0.6)" }}>
+    <div style={{ textAlign: "center", marginBottom: 24 }}>
+      <div style={{ fontFamily: "'Orbitron', sans-serif", fontSize: 22, fontWeight: 900, color: "#fff", marginBottom: 12 }}>
+        ⚡ Nex<span style={{ color: "#3B82F6" }}>Volt</span>
       </div>
-      {([
-        ["Shop", ["Laptops", "Desktops", "Tablets", "Audio", "Cameras", "Gaming"]],
-        ["Support", ["Track Order", "Returns", "Warranty", "Contact Us", "FAQ"]],
-        ["Company", ["About", "Careers", "Press", "Privacy", "Terms"]],
-      ] as [string, string[]][]).map(([title, links]) => (
-        <div key={title}>
-          <div style={{ color: "#fff", fontWeight: 700, marginBottom: 16, fontSize: 14 }}>{title}</div>
-          {links.map(l => <div key={l} style={{ fontSize: 13, marginBottom: 8, cursor: "pointer" }}>{l}</div>)}
-        </div>
-      ))}
+      <p style={{ fontSize: 14, lineHeight: 1.7, maxWidth: 520, margin: "0 auto" }}>
+        Your trusted destination for computer parts, peripherals, and custom PC builds.
+      </p>
     </div>
     <div style={{ borderTop: "1px solid rgba(255,255,255,0.1)", paddingTop: 24, textAlign: "center", fontSize: 13 }}>
-      © 2026 NexVolt Electronics, Inc. All rights reserved.
+      © {new Date().getFullYear()} NexVolt. All rights reserved.
     </div>
   </div>
 );
@@ -463,7 +494,7 @@ const StepIndicator: React.FC<StepIndicatorProps> = ({ checkoutStep }) => (
 const TrustBar: React.FC = () => (
   <div style={{ background: "#fff", borderBottom: "1px solid #E5E7EB", padding: "14px 60px" }}>
     <div style={{ display: "flex", justifyContent: "center", gap: 60, flexWrap: "wrap" }}>
-      {[["🚚", "Free Shipping $50+"], ["🔒", "Secure Checkout"], ["↩️", "30-Day Returns"], ["📞", "24/7 Support"], ["🏆", "Certified Products"]].map(([icon, text]) => (
+      {[["🔒", "Secure Checkout"], ["🛠️", "Custom PC Builds"], ["🏆", "Authentic Products"], ["📦", "Nationwide Delivery"]].map(([icon, text]) => (
         <div key={text} style={{ display: "flex", alignItems: "center", gap: 8, color: "#374151", fontSize: 13, fontWeight: 600 }}>
           <span style={{ fontSize: 18 }}>{icon}</span>{text}
         </div>
@@ -548,6 +579,7 @@ interface LandingPageProps {
   heroIndex: number;
   heroProducts: Product[];
   products: Product[];
+  categories: string[];
   setHeroIndex: (i: number) => void;
   wishlist: number[];
   addToCart: (p: Product) => void;
@@ -556,8 +588,19 @@ interface LandingPageProps {
   setPage: (p: StorefrontPage) => void;
   setCategory: (c: string) => void;
 }
-const LandingPage: React.FC<LandingPageProps> = ({ heroIndex, heroProducts, products, setHeroIndex, wishlist, addToCart, toggleWishlist, setSelectedProduct, setPage, setCategory }) => {
+const LandingPage: React.FC<LandingPageProps> = ({ heroIndex, heroProducts, products, categories, setHeroIndex, wishlist, addToCart, toggleWishlist, setSelectedProduct, setPage, setCategory }) => {
   const heroProduct = heroProducts[heroIndex];
+
+  if (!heroProduct) {
+    return (
+      <div style={{ ...STYLES.page, fontFamily: "'Inter', sans-serif", display: "flex", flexDirection: "column", alignItems: "center", justifyContent: "center", textAlign: "center", padding: "120px 24px" }}>
+        <div style={{ fontSize: 64, marginBottom: 16 }}>🛒</div>
+        <h2 style={{ fontFamily: "'Orbitron', sans-serif", fontSize: 24, fontWeight: 900, color: "#0A0F1E", marginBottom: 8 }}>No products listed yet</h2>
+        <p style={{ color: "#6B7280" }}>Check back soon — new listings are on the way.</p>
+      </div>
+    );
+  }
+
   return (
     <div style={{ fontFamily: "'Inter', sans-serif" }}>
       <style>{`
@@ -578,7 +621,7 @@ const LandingPage: React.FC<LandingPageProps> = ({ heroIndex, heroProducts, prod
             <button style={{ color: "#3B82F6", fontSize: 14, background: "none", border: "none", cursor: "pointer", fontWeight: 600 }} onClick={() => setPage("browse")}>View All →</button>
           </div>
           <div style={{ display: "flex", gap: 12, flexWrap: "wrap" }}>
-            {CATEGORIES.slice(1).map(cat => (
+            {categories.filter(c => c !== "All").map(cat => (
               <button key={cat} className="cat-chip" onClick={() => { setCategory(cat); setPage("browse"); }}
                 style={{ background: "#EFF6FF", color: "#1D4ED8", border: "none", borderRadius: 100, padding: "10px 22px", fontSize: 14, fontWeight: 600, cursor: "pointer", transition: "all 0.2s" }}>
                 {cat}
@@ -599,16 +642,6 @@ const LandingPage: React.FC<LandingPageProps> = ({ heroIndex, heroProducts, prod
             ))}
           </div>
         </div>
-        {/* Banner */}
-        <div style={{ margin: "0 60px 60px", background: "linear-gradient(135deg, #1E3A8A, #1D4ED8)", borderRadius: 20, padding: "48px 60px", display: "flex", justifyContent: "space-between", alignItems: "center", overflow: "hidden", position: "relative" }}>
-          <div style={{ position: "absolute", right: 60, fontSize: 120, opacity: 0.15 }}>💻</div>
-          <div>
-            <div style={{ color: "rgba(255,255,255,0.7)", fontSize: 13, fontWeight: 600, marginBottom: 8, textTransform: "uppercase", letterSpacing: 1 }}>Limited Time Offer</div>
-            <h2 style={{ fontFamily: "'Orbitron', sans-serif", color: "#fff", fontSize: 32, margin: "0 0 12px", fontWeight: 900 }}>Up to 30% Off Laptops</h2>
-            <p style={{ color: "rgba(255,255,255,0.7)", marginBottom: 24, fontSize: 16 }}>Premium computing at unbeatable prices. Ends Sunday.</p>
-            <button style={{ ...STYLES.btn, background: "#fff", color: "#1D4ED8" }} onClick={() => { setCategory("Laptops"); setPage("browse"); }}>Shop Laptops</button>
-          </div>
-        </div>
         <Footer />
       </div>
     </div>
@@ -622,6 +655,7 @@ interface BrowsePageProps {
   category: string;
   sort: string;
   products: Product[];
+  categories: string[];
   setCategory: (c: string) => void;
   setSort: (s: string) => void;
   wishlist: number[];
@@ -630,7 +664,7 @@ interface BrowsePageProps {
   setSelectedProduct: (p: Product) => void;
   setPage: (p: StorefrontPage) => void;
 }
-const BrowsePage: React.FC<BrowsePageProps> = ({ search, category, sort, products, setCategory, setSort, wishlist, addToCart, toggleWishlist, setSelectedProduct, setPage }) => {
+const BrowsePage: React.FC<BrowsePageProps> = ({ search, category, sort, products, categories, setCategory, setSort, wishlist, addToCart, toggleWishlist, setSelectedProduct, setPage }) => {
   const filtered = products.filter(p => {
     const matchCat = category === "All" || p.category === category;
     const matchSearch = p.name.toLowerCase().includes(search.toLowerCase()) || p.category.toLowerCase().includes(search.toLowerCase());
@@ -649,21 +683,13 @@ const BrowsePage: React.FC<BrowsePageProps> = ({ search, category, sort, product
         <div style={{ display: "flex", gap: 28 }}>
           {/* Sidebar */}
           <div style={{ width: 220, flexShrink: 0 }}>
-            <div style={{ background: "#fff", borderRadius: 14, padding: "20px", border: "1px solid #E5E7EB", marginBottom: 16 }}>
+            <div style={{ background: "#fff", borderRadius: 14, padding: "20px", border: "1px solid #E5E7EB" }}>
               <div style={{ fontWeight: 700, fontSize: 15, color: "#111827", marginBottom: 14 }}>Categories</div>
-              {CATEGORIES.map(cat => (
+              {categories.map(cat => (
                 <div key={cat} onClick={() => setCategory(cat)}
                   style={{ padding: "8px 12px", borderRadius: 8, cursor: "pointer", fontSize: 14, fontWeight: category === cat ? 700 : 400, color: category === cat ? "#1D4ED8" : "#374151", background: category === cat ? "#EFF6FF" : "transparent", marginBottom: 2, transition: "all 0.15s" }}>
-                  {cat} <span style={{ float: "right", color: "#9CA3AF", fontSize: 12 }}>{cat === "All" ? PRODUCTS.length : PRODUCTS.filter(p => p.category === cat).length}</span>
+                  {cat} <span style={{ float: "right", color: "#9CA3AF", fontSize: 12 }}>{cat === "All" ? products.length : products.filter(p => p.category === cat).length}</span>
                 </div>
-              ))}
-            </div>
-            <div style={{ background: "#fff", borderRadius: 14, padding: "20px", border: "1px solid #E5E7EB" }}>
-              <div style={{ fontWeight: 700, fontSize: 15, color: "#111827", marginBottom: 14 }}>Price Range</div>
-              {[["Under $300"], ["$300 – $800"], ["$800 – $1,500"], ["$1,500+"]].map(([label]) => (
-                <label key={label} style={{ display: "flex", alignItems: "center", gap: 8, fontSize: 13, color: "#374151", marginBottom: 10, cursor: "pointer" }}>
-                  <input type="checkbox" /> {label}
-                </label>
               ))}
             </div>
           </div>
@@ -678,7 +704,6 @@ const BrowsePage: React.FC<BrowsePageProps> = ({ search, category, sort, product
                 <option value="featured">Sort: Featured</option>
                 <option value="price-asc">Price: Low to High</option>
                 <option value="price-desc">Price: High to Low</option>
-                <option value="rating">Top Rated</option>
               </select>
             </div>
             <div style={{ display: "grid", gridTemplateColumns: "repeat(auto-fill, minmax(240px, 1fr))", gap: 18 }}>
@@ -698,19 +723,17 @@ const BrowsePage: React.FC<BrowsePageProps> = ({ search, category, sort, product
 
 interface ProductPageProps {
   product: Product;
+  relatedProducts: Product[];
   wishlist: number[];
   quantity: number;
   setQuantity: (q: number) => void;
-  review: { rating: number; text: string };
-  setReview: React.Dispatch<React.SetStateAction<{ rating: number; text: string }>>;
   addToCart: (p: Product, qty?: number) => void;
   toggleWishlist: (id: number) => void;
   setSelectedProduct: (p: Product) => void;
   setPage: (p: StorefrontPage) => void;
   setCheckoutStep: (s: number) => void;
-  notify: (msg: string, type?: "success" | "error") => void;
 }
-const ProductPage: React.FC<ProductPageProps> = ({ product: p, wishlist, quantity, setQuantity, review, setReview, addToCart, toggleWishlist, setSelectedProduct, setPage, setCheckoutStep, notify }) => (
+const ProductPage: React.FC<ProductPageProps> = ({ product: p, relatedProducts, wishlist, quantity, setQuantity, addToCart, toggleWishlist, setSelectedProduct, setPage, setCheckoutStep }) => (
   <div style={{ fontFamily: "'Inter', sans-serif" }}>
     <div style={{ ...STYLES.page, padding: "40px 60px" }}>
       <div style={{ color: "#6B7280", fontSize: 13, marginBottom: 24, cursor: "pointer" }} onClick={() => setPage("browse")}>← Back to Products</div>
@@ -773,52 +796,25 @@ const ProductPage: React.FC<ProductPageProps> = ({ product: p, wishlist, quantit
           </div>
         </div>
       </div>
-      {/* Reviews */}
-      {/* <div style={{ marginTop: 48 }}>
-        <h2 style={{ fontFamily: "'Orbitron', sans-serif", fontSize: 22, fontWeight: 900, color: "#0A0F1E", marginBottom: 24 }}>Customer Reviews</h2>
-        <div style={{ display: "grid", gridTemplateColumns: "1fr 1fr 1fr", gap: 16, marginBottom: 32 }}>
-          {REVIEWS.map((r, i) => (
-            <div key={i} style={{ background: "#fff", borderRadius: 14, padding: "20px", border: "1px solid #E5E7EB" }}>
-              <div style={{ display: "flex", justifyContent: "space-between", marginBottom: 10 }}>
-                <div style={{ fontWeight: 700, color: "#111827" }}>{r.user}</div>
-                {r.verified && <span style={{ fontSize: 11, color: "#10B981", fontWeight: 600, background: "#F0FDF4", padding: "2px 8px", borderRadius: 4 }}>✓ Verified</span>}
+      {/* Related Products */}
+      {relatedProducts.length > 0 && (
+        <div style={{ marginTop: 48 }}>
+          <h2 style={{ fontFamily: "'Orbitron', sans-serif", fontSize: 22, fontWeight: 900, color: "#0A0F1E", marginBottom: 24 }}>You May Also Like</h2>
+          <div style={{ display: "grid", gridTemplateColumns: "repeat(4, 1fr)", gap: 16 }}>
+            {relatedProducts.map(pr => (
+              <div key={pr.id} style={{ ...STYLES.card, cursor: "pointer" }} onClick={() => { setSelectedProduct(pr); window.scrollTo(0, 0); }}>
+                <div style={{ background: "linear-gradient(135deg, #EFF6FF, #F0F9FF)", height: 100, display: "flex", alignItems: "center", justifyContent: "center", fontSize: 48, overflow: "hidden" }}>
+                  <ProductVisual src={pr.img} size={48} />
+                </div>
+                <div style={{ padding: "12px" }}>
+                  <div style={{ fontWeight: 700, fontSize: 13, color: "#111827", marginBottom: 4 }}>{pr.name}</div>
+                  <span style={{ fontFamily: "'Orbitron', sans-serif", fontSize: 15, fontWeight: 900, color: "#1D4ED8" }}>{formatCurrency(pr.price)}</span>
+                </div>
               </div>
-              <Stars rating={r.rating} size={14} />
-              <p style={{ color: "#4B5563", fontSize: 14, lineHeight: 1.6, marginTop: 10, marginBottom: 8 }}>{r.text}</p>
-              <div style={{ fontSize: 12, color: "#9CA3AF" }}>{r.date}</div>
-            </div>
-          ))}
-        </div>
-        <div style={{ background: "#fff", borderRadius: 14, padding: "24px", border: "1px solid #E5E7EB" }}>
-          <div style={{ fontWeight: 700, fontSize: 15, marginBottom: 16 }}>Write a Review</div>
-          <div style={{ display: "flex", gap: 8, marginBottom: 14 }}>
-            {[1, 2, 3, 4, 5].map(s => (
-              <span key={s} style={{ fontSize: 28, cursor: "pointer", color: s <= review.rating ? "#F59E0B" : "#D1D5DB" }} onClick={() => setReview(r => ({ ...r, rating: s }))}>★</span>
             ))}
           </div>
-          <textarea value={review.text} onChange={e => setReview(r => ({ ...r, text: e.target.value }))}
-            placeholder="Share your experience with this product..."
-            style={{ width: "100%", borderRadius: 10, border: "1px solid #D1D5DB", padding: "12px", fontSize: 14, outline: "none", resize: "vertical", minHeight: 100, boxSizing: "border-box" }} />
-          <button style={{ ...STYLES.btn, marginTop: 12 }} onClick={() => { if (review.text) { notify("Review submitted! Thank you."); setReview({ rating: 5, text: "" }); } }}>Submit Review</button>
         </div>
-      </div> */}
-      {/* Related Products */}
-      <div style={{ marginTop: 48 }}>
-        <h2 style={{ fontFamily: "'Orbitron', sans-serif", fontSize: 22, fontWeight: 900, color: "#0A0F1E", marginBottom: 24 }}>You May Also Like</h2>
-        <div style={{ display: "grid", gridTemplateColumns: "repeat(4, 1fr)", gap: 16 }}>
-          {PRODUCTS.filter(pr => pr.id !== p.id).slice(0, 4).map(pr => (
-            <div key={pr.id} style={{ ...STYLES.card, cursor: "pointer" }} onClick={() => { setSelectedProduct(pr); window.scrollTo(0, 0); }}>
-              <div style={{ background: "linear-gradient(135deg, #EFF6FF, #F0F9FF)", height: 100, display: "flex", alignItems: "center", justifyContent: "center", fontSize: 48, overflow: "hidden" }}>
-                <ProductVisual src={pr.img} size={48} />
-              </div>
-              <div style={{ padding: "12px" }}>
-                <div style={{ fontWeight: 700, fontSize: 13, color: "#111827", marginBottom: 4 }}>{pr.name}</div>
-                <span style={{ fontFamily: "'Orbitron', sans-serif", fontSize: 15, fontWeight: 900, color: "#1D4ED8" }}>{formatCurrency(pr.price)}</span>
-              </div>
-            </div>
-          ))}
-        </div>
-      </div>
+      )}
     </div>
   </div>
 );
@@ -827,11 +823,12 @@ const ProductPage: React.FC<ProductPageProps> = ({ product: p, wishlist, quantit
 
 interface WishlistPageProps {
   wishlist: number[];
+  products: Product[];
   toggleWishlist: (id: number) => void;
   addToCart: (p: Product) => void;
   setPage: (p: StorefrontPage) => void;
 }
-const WishlistPage: React.FC<WishlistPageProps> = ({ wishlist, toggleWishlist, addToCart, setPage }) => (
+const WishlistPage: React.FC<WishlistPageProps> = ({ wishlist, products, toggleWishlist, addToCart, setPage }) => (
   <div style={{ fontFamily: "'Inter', sans-serif" }}>
     <div style={{ ...STYLES.page, padding: "40px 60px" }}>
       <h1 style={{ fontFamily: "'Orbitron', sans-serif", fontSize: 26, fontWeight: 900, color: "#0A0F1E", marginBottom: 24 }}>Your Wishlist</h1>
@@ -843,9 +840,11 @@ const WishlistPage: React.FC<WishlistPageProps> = ({ wishlist, toggleWishlist, a
         </div>
       ) : (
         <div style={{ display: "grid", gridTemplateColumns: "repeat(auto-fill, minmax(260px, 1fr))", gap: 20 }}>
-          {PRODUCTS.filter(p => wishlist.includes(p.id)).map(p => (
+          {products.filter(p => wishlist.includes(p.id)).map(p => (
             <div key={p.id} style={STYLES.card}>
-              <div style={{ background: "linear-gradient(135deg, #EFF6FF, #F0F9FF)", height: 140, display: "flex", alignItems: "center", justifyContent: "center", fontSize: 64 }}>{p.img}</div>
+              <div style={{ background: "linear-gradient(135deg, #EFF6FF, #F0F9FF)", height: 140, display: "flex", alignItems: "center", justifyContent: "center", fontSize: 64, overflow: "hidden" }}>
+                <ProductVisual src={p.img} size={64} />
+              </div>
               <div style={{ padding: "16px" }}>
                 <div style={{ fontWeight: 700, color: "#111827", marginBottom: 8 }}>{p.name}</div>
                 <span style={{ fontFamily: "'Orbitron', sans-serif", fontSize: 20, fontWeight: 900, color: "#1D4ED8" }}>{formatCurrency(p.price)}</span>
@@ -930,10 +929,6 @@ const CheckoutPage: React.FC<CheckoutPageProps> = ({ checkoutStep, setCheckoutSt
             <div style={{ position: "sticky", top: 100, height: "fit-content" }}>
               <OrderSummarySidebar cart={cart} cartTotal={cartTotal} cartCount={cartCount} />
               <div style={{ background: "#fff", borderRadius: 16, padding: "20px", border: "1px solid #E5E7EB", marginTop: 16 }}>
-                <div style={{ display: "flex", gap: 8, marginBottom: 16 }}>
-                  <input placeholder="Promo code" style={{ flex: 1, border: "1px solid #D1D5DB", borderRadius: 8, padding: "10px 12px", fontSize: 13, outline: "none" }} />
-                  <button style={{ ...STYLES.btnOutline, padding: "10px 14px", fontSize: 13 }}>Apply</button>
-                </div>
                 <button style={{ ...STYLES.btn, width: "100%", padding: "14px" }} onClick={() => setCheckoutStep(1)}>Proceed to Checkout →</button>
                 <button style={{ ...STYLES.btnGhost, width: "100%", marginTop: 8, padding: "12px", color: "#374151", border: "1px solid #D1D5DB" }} onClick={() => setPage("browse")}>Continue Shopping</button>
               </div>
@@ -989,15 +984,10 @@ const CheckoutPage: React.FC<CheckoutPageProps> = ({ checkoutStep, setCheckoutSt
             </div>
             <div style={{ background: "#fff", borderRadius: 16, padding: "24px", border: "1px solid #E5E7EB" }}>
               <div style={{ fontWeight: 700, fontSize: 16, marginBottom: 18, color: "#111827" }}>Shipping Method</div>
-              {([["Standard (5-7 days)", "FREE"], ["Express (2-3 days)", "$12.99"], ["Overnight (1 day)", "$29.99"]] as [string, string][]).map(([label, price]) => (
-                <label key={label} style={{ display: "flex", alignItems: "center", gap: 12, padding: "14px 16px", borderRadius: 10, border: "1px solid #E5E7EB", marginBottom: 10, cursor: "pointer", justifyContent: "space-between" }}>
-                  <div style={{ display: "flex", alignItems: "center", gap: 10 }}>
-                    <input type="radio" name="shipping" defaultChecked={label.includes("Standard")} style={{ accentColor: "#3B82F6" }} />
-                    <span style={{ fontSize: 14, fontWeight: 600, color: "#374151" }}>{label}</span>
-                  </div>
-                  <span style={{ fontSize: 14, fontWeight: 700, color: price === "FREE" ? "#10B981" : "#374151" }}>{price}</span>
-                </label>
-              ))}
+              <div style={{ display: "flex", alignItems: "center", justifyContent: "space-between", padding: "14px 16px", borderRadius: 10, border: "1px solid #DBEAFE", background: "#F8FAFF" }}>
+                <span style={{ fontSize: 14, fontWeight: 600, color: "#374151" }}>Standard delivery</span>
+                <span style={{ fontSize: 14, fontWeight: 700, color: "#10B981" }}>FREE</span>
+              </div>
             </div>
           </div>
           <div>
@@ -1121,134 +1111,8 @@ const CheckoutPage: React.FC<CheckoutPageProps> = ({ checkoutStep, setCheckoutSt
             </div>
           </div>
           <div style={{ display: "flex", gap: 12, justifyContent: "center" }}>
-            <button style={STYLES.btn} onClick={() => setCheckoutStep(4)}>Track Order 📦</button>
+            <button style={STYLES.btn} onClick={() => setPage("portal")}>View My Orders</button>
             <button style={STYLES.btnOutline} onClick={() => setPage("browse")}>Continue Shopping</button>
-          </div>
-        </div>
-      </div>
-    </div>
-  );
-
-  if (checkoutStep === 4) return (
-    <div style={{ fontFamily: "'Inter', sans-serif" }}>
-      <div style={{ ...STYLES.page, padding: "40px 60px" }}>
-        <StepIndicator checkoutStep={checkoutStep} />
-        <div style={{ maxWidth: 700, margin: "0 auto" }}>
-          <h1 style={{ fontFamily: "'Orbitron', sans-serif", fontSize: 26, fontWeight: 900, color: "#0A0F1E", marginBottom: 8 }}>Track Your Order</h1>
-          <div style={{ color: "#6B7280", marginBottom: 28 }}>Order #{orderNum}</div>
-          <div style={{ background: "#fff", borderRadius: 16, padding: "28px", border: "1px solid #E5E7EB", marginBottom: 20 }}>
-            <div style={{ display: "flex", justifyContent: "space-between", alignItems: "center", marginBottom: 28 }}>
-              <div style={{ fontWeight: 700, fontSize: 16 }}>Shipment Status</div>
-              <div style={{ background: "#FEF3C7", color: "#92400E", padding: "6px 14px", borderRadius: 8, fontSize: 13, fontWeight: 700 }}>🚚 In Transit</div>
-            </div>
-            <div style={{ display: "flex", justifyContent: "space-between", position: "relative", marginBottom: 32 }}>
-              <div style={{ position: "absolute", top: 14, left: "8%", right: "8%", height: 4, background: "#E5E7EB", borderRadius: 2 }}>
-                <div style={{ width: "55%", height: "100%", background: "linear-gradient(90deg, #10B981, #3B82F6)", borderRadius: 2 }} />
-              </div>
-              {([["✓", "Order Placed", "May 12", true], ["✓", "Processed", "May 12", true], ["🚚", "In Transit", "May 13", true], ["📦", "Out for Delivery", "May 16", false], ["🏠", "Delivered", "Est. May 16", false]] as [string, string, string, boolean][]).map(([icon, label, date, done]) => (
-                <div key={label} style={{ display: "flex", flexDirection: "column", alignItems: "center", zIndex: 1 }}>
-                  <div style={{ width: 32, height: 32, borderRadius: "50%", background: done ? "#3B82F6" : "#E5E7EB", color: done ? "#fff" : "#9CA3AF", display: "flex", alignItems: "center", justifyContent: "center", fontSize: 14, fontWeight: 700, marginBottom: 8 }}>{icon}</div>
-                  <div style={{ fontSize: 11, fontWeight: 700, color: done ? "#111827" : "#9CA3AF", textAlign: "center" }}>{label}</div>
-                  <div style={{ fontSize: 10, color: "#9CA3AF", marginTop: 2 }}>{date}</div>
-                </div>
-              ))}
-            </div>
-          </div>
-          <div style={{ background: "#fff", borderRadius: 16, padding: "24px", border: "1px solid #E5E7EB", marginBottom: 20 }}>
-            <div style={{ fontWeight: 700, fontSize: 15, marginBottom: 18 }}>Tracking Events</div>
-            {([
-              ["🟢", "Package picked up by courier", "NexVolt Fulfillment Center, CA", "May 12, 2:14 PM"],
-              ["🔵", "Package in transit", "Distribution Hub, Phoenix AZ", "May 13, 8:30 AM"],
-              ["🟡", "Package arriving soon", "Local Delivery Facility", "Est. May 16, Morning"],
-            ] as [string, string, string, string][]).map(([dot, event, location, time]) => (
-              <div key={event} style={{ display: "flex", gap: 14, marginBottom: 16, paddingBottom: 16, borderBottom: "1px solid #F3F4F6" }}>
-                <span style={{ fontSize: 16, marginTop: 2 }}>{dot}</span>
-                <div style={{ flex: 1 }}>
-                  <div style={{ fontWeight: 600, color: "#111827", fontSize: 14 }}>{event}</div>
-                  <div style={{ fontSize: 13, color: "#6B7280" }}>{location}</div>
-                </div>
-                <div style={{ fontSize: 12, color: "#9CA3AF", whiteSpace: "nowrap" }}>{time}</div>
-              </div>
-            ))}
-          </div>
-          <div style={{ display: "flex", gap: 12 }}>
-            <button style={STYLES.btn} onClick={() => setCheckoutStep(5)}>Simulate Delivery ✓</button>
-            <button style={STYLES.btnOutline} onClick={() => setPage("browse")}>Continue Shopping</button>
-          </div>
-        </div>
-      </div>
-    </div>
-  );
-
-  if (checkoutStep === 5) return (
-    <div style={{ fontFamily: "'Inter', sans-serif" }}>
-      <div style={{ ...STYLES.page, padding: "40px 60px" }}>
-        <StepIndicator checkoutStep={checkoutStep} />
-        <div style={{ maxWidth: 700, margin: "0 auto" }}>
-          <div style={{ textAlign: "center", marginBottom: 40 }}>
-            <div style={{ fontSize: 72, marginBottom: 12 }}>📦</div>
-            <h1 style={{ fontFamily: "'Orbitron', sans-serif", fontSize: 28, fontWeight: 900, color: "#10B981", marginBottom: 8 }}>Delivered!</h1>
-            <p style={{ color: "#4B5563" }}>Your order #{orderNum} was delivered on May 16, 2026 at 2:47 PM</p>
-          </div>
-          <div style={{ display: "grid", gridTemplateColumns: "1fr 1fr", gap: 16, marginBottom: 28 }}>
-            {([["↩️", "Return & Refund", "30-day return policy", "Return Item"], ["🔄", "Exchange", "Swap for another item", "Exchange"], ["🛡️", "Warranty Claim", "2-year coverage", "Claim Warranty"], ["⭐", "Rate Product", "Share your experience", "Write Review"]] as [string, string, string, string][]).map(([icon, title, sub, btn]) => (
-              <div key={title} style={{ background: "#fff", borderRadius: 14, padding: "20px", border: "1px solid #E5E7EB" }}>
-                <div style={{ fontSize: 32, marginBottom: 10 }}>{icon}</div>
-                <div style={{ fontWeight: 700, color: "#111827", marginBottom: 4 }}>{title}</div>
-                <div style={{ fontSize: 13, color: "#6B7280", marginBottom: 14 }}>{sub}</div>
-                <button style={{ ...STYLES.btnOutline, padding: "8px 16px", fontSize: 13, width: "100%" }}
-                  onClick={() => { if (title === "Return & Refund") document.getElementById("return-section")?.scrollIntoView({ behavior: "smooth" }); }}>
-                  {btn}
-                </button>
-              </div>
-            ))}
-          </div>
-          <div id="return-section" style={{ background: "#fff", borderRadius: 16, padding: "24px", border: "1px solid #E5E7EB", marginBottom: 20 }}>
-            <div style={{ fontWeight: 700, fontSize: 16, marginBottom: 16 }}>Request a Return</div>
-            {returnSubmitted ? (
-              <div style={{ textAlign: "center", padding: "20px" }}>
-                <div style={{ fontSize: 40, marginBottom: 12 }}>✅</div>
-                <div style={{ fontWeight: 700, color: "#10B981", fontSize: 16 }}>Return request submitted!</div>
-                <div style={{ color: "#6B7280", fontSize: 14, marginTop: 8 }}>We'll send a prepaid return label within 24 hours.</div>
-              </div>
-            ) : (
-              <>
-                <div style={{ marginBottom: 14 }}>
-                  <label style={{ fontSize: 13, fontWeight: 600, color: "#374151", display: "block", marginBottom: 8 }}>Reason for return</label>
-                  <select value={returnReason} onChange={e => setReturnReason(e.target.value)}
-                    style={{ width: "100%", border: "1px solid #D1D5DB", borderRadius: 8, padding: "10px 12px", fontSize: 14, outline: "none" }}>
-                    <option value="">Select a reason...</option>
-                    <option>Defective or damaged</option>
-                    <option>Wrong item received</option>
-                    <option>Changed my mind</option>
-                    <option>Product not as described</option>
-                    <option>Found better price</option>
-                  </select>
-                </div>
-                <div style={{ marginBottom: 16 }}>
-                  <label style={{ fontSize: 13, fontWeight: 600, color: "#374151", display: "block", marginBottom: 8 }}>Additional details</label>
-                  <textarea placeholder="Please describe the issue..." style={{ width: "100%", border: "1px solid #D1D5DB", borderRadius: 8, padding: "12px", fontSize: 14, outline: "none", resize: "vertical", minHeight: 80, boxSizing: "border-box" }} />
-                </div>
-                <button style={{ ...STYLES.btn, background: "#EF4444" }}
-                  onClick={() => { if (returnReason) setReturnSubmitted(true); else notify("Please select a return reason", "error"); }}>
-                  Submit Return Request
-                </button>
-              </>
-            )}
-          </div>
-          <div style={{ background: "#F8FAFF", borderRadius: 16, padding: "24px", border: "1px solid #DBEAFE" }}>
-            <div style={{ fontWeight: 700, fontSize: 15, marginBottom: 14, color: "#1D4ED8" }}>Need Help?</div>
-            <div style={{ display: "flex", gap: 12 }}>
-              {[["💬 Live Chat", "Chat with an agent"], ["📞 Call Us", "1-800-NEXVOLT"], ["📧 Email", "support@nexvolt.com"]].map(([label, sub]) => (
-                <div key={label} style={{ flex: 1, background: "#fff", borderRadius: 10, padding: "14px", border: "1px solid #DBEAFE", textAlign: "center" }}>
-                  <div style={{ fontWeight: 700, color: "#1D4ED8", marginBottom: 4 }}>{label}</div>
-                  <div style={{ fontSize: 12, color: "#6B7280" }}>{sub}</div>
-                </div>
-              ))}
-            </div>
-          </div>
-          <div style={{ textAlign: "center", marginTop: 24 }}>
-            <button style={STYLES.btn} onClick={() => { setCart([]); setPage("landing"); setCheckoutStep(0); }}>Back to Home</button>
           </div>
         </div>
       </div>
@@ -1331,9 +1195,6 @@ const LoginPage: React.FC<LoginPageProps> = ({ setPage }) => {
               ← Back to Store
             </button>
           </div>
-        </div>
-        <div style={{ textAlign: "center", marginTop: 20, color: "rgba(255,255,255,0.3)", fontSize: 12 }}>
-          Demo: use any registered account email & password
         </div>
       </div>
     </div>
@@ -1421,13 +1282,14 @@ interface CustomerPortalProps {
   currentUser: User;
   cart: CartItem[];
   wishlist: number[];
-  orderNum: string;
+  products: Product[];
+  orders: ServerOrder[];
   setCurrentUser: (u: User | null) => void;
   setPage: (p: StorefrontPage) => void;
   setCheckoutStep: (s: number) => void;
   notify: (msg: string, type?: "success" | "error") => void;
 }
-const CustomerPortal: React.FC<CustomerPortalProps> = ({ currentUser, cart, wishlist, orderNum, setCurrentUser, setPage, setCheckoutStep, notify }) => {
+const CustomerPortal: React.FC<CustomerPortalProps> = ({ currentUser, cart, wishlist, products, orders, setCurrentUser, setPage, setCheckoutStep, notify }) => {
   const [activeTab, setActiveTab] = useState<"overview" | "orders" | "wishlist" | "settings">("overview");
   const [editMode, setEditMode] = useState(false);
   const [editName, setEditName] = useState(currentUser.firstName);
@@ -1503,12 +1365,11 @@ const CustomerPortal: React.FC<CustomerPortalProps> = ({ currentUser, cart, wish
               </h1>
               <p style={{ color: "#6B7280", marginBottom: 36 }}>Here's a summary of your account activity.</p>
               {/* Stats */}
-              <div style={{ display: "grid", gridTemplateColumns: "repeat(4, 1fr)", gap: 16, marginBottom: 36 }}>
+              <div style={{ display: "grid", gridTemplateColumns: "repeat(3, 1fr)", gap: 16, marginBottom: 36 }}>
                 {([
-                  ["📦", "Total Orders", currentUser.orders.length || "0", "#3B82F6"],
+                  ["📦", "Total Orders", orders.length.toString(), "#3B82F6"],
                   ["♡", "Saved Items", wishlist.length.toString(), "#EF4444"],
                   ["🛒", "In Cart", cart.reduce((s, i) => s + i.qty, 0).toString(), "#10B981"],
-                  ["⭐", "Reviews Left", "3", "#F59E0B"],
                 ] as [string, string, string, string][]).map(([icon, label, val, color]) => (
                   <div key={label} style={{ background: "#fff", borderRadius: 16, padding: "20px", border: "1px solid #E5E7EB" }}>
                     <div style={{ fontSize: 28, marginBottom: 8 }}>{icon}</div>
@@ -1523,13 +1384,13 @@ const CustomerPortal: React.FC<CustomerPortalProps> = ({ currentUser, cart, wish
                   <div style={{ fontWeight: 700, fontSize: 16, color: "#111827" }}>Recent Activity</div>
                   <button style={{ background: "none", border: "none", color: "#3B82F6", fontSize: 13, fontWeight: 600, cursor: "pointer" }} onClick={() => setActiveTab("orders")}>View All →</button>
                 </div>
-                {orderNum ? (
+                {orders.length > 0 ? (
                   <div style={{ background: "#F8FAFF", borderRadius: 12, padding: "16px 20px", display: "flex", justifyContent: "space-between", alignItems: "center" }}>
                     <div>
-                      <div style={{ fontWeight: 700, color: "#111827", marginBottom: 4 }}>Order #{orderNum}</div>
-                      <div style={{ fontSize: 13, color: "#6B7280" }}>Placed during this session</div>
+                      <div style={{ fontWeight: 700, color: "#111827", marginBottom: 4 }}>Order #{orders[0].order_code}</div>
+                      <div style={{ fontSize: 13, color: "#6B7280" }}>{orders[0].date} · {formatCurrency(orders[0].total)}</div>
                     </div>
-                    <div style={{ background: "#FEF3C7", color: "#92400E", padding: "6px 14px", borderRadius: 8, fontSize: 12, fontWeight: 700 }}>🚚 In Transit</div>
+                    <div style={{ ...orderStatusStyle(orders[0].status), padding: "6px 14px", borderRadius: 8, fontSize: 12, fontWeight: 700 }}>{orders[0].status}</div>
                   </div>
                 ) : (
                   <div style={{ textAlign: "center", padding: "32px", color: "#9CA3AF" }}>
@@ -1555,33 +1416,31 @@ const CustomerPortal: React.FC<CustomerPortalProps> = ({ currentUser, cart, wish
             <div>
               <h1 style={{ fontFamily: "'Orbitron', sans-serif", fontSize: 24, fontWeight: 900, color: "#0A0F1E", marginBottom: 8 }}>My Orders</h1>
               <p style={{ color: "#6B7280", marginBottom: 32 }}>Track and manage your purchases.</p>
-              {orderNum ? (
-                <div style={{ background: "#fff", borderRadius: 16, border: "1px solid #E5E7EB", overflow: "hidden" }}>
-                  <div style={{ padding: "20px 24px", borderBottom: "1px solid #F3F4F6", display: "flex", justifyContent: "space-between", alignItems: "center" }}>
-                    <div>
-                      <div style={{ fontFamily: "'Orbitron', sans-serif", fontWeight: 900, fontSize: 16, color: "#111827" }}>Order #{orderNum}</div>
-                      <div style={{ fontSize: 13, color: "#6B7280", marginTop: 4 }}>Placed today · {cart.length} item(s)</div>
-                    </div>
-                    <div style={{ display: "flex", alignItems: "center", gap: 12 }}>
-                      <div style={{ background: "#FEF3C7", color: "#92400E", padding: "6px 14px", borderRadius: 8, fontSize: 13, fontWeight: 700 }}>🚚 In Transit</div>
-                      <button style={{ ...STYLES.btn, padding: "8px 16px", fontSize: 13 }} onClick={() => { setCheckoutStep(4); setPage("checkout"); }}>Track</button>
-                    </div>
-                  </div>
-                  {cart.map(item => (
-                    <div key={item.id} style={{ padding: "16px 24px", borderBottom: "1px solid #F3F4F6", display: "flex", alignItems: "center", gap: 16 }}>
-                      <div style={{ width: 48, height: 48, borderRadius: 10, overflow: "hidden", background: "linear-gradient(135deg, #EFF6FF, #F0F9FF)", display: "flex", alignItems: "center", justifyContent: "center", flexShrink: 0 }}>
-                        <ProductVisual src={item.img} size={36} />
+              {orders.length > 0 ? (
+                <div style={{ display: "flex", flexDirection: "column", gap: 16 }}>
+                  {orders.map(order => (
+                    <div key={order.id} style={{ background: "#fff", borderRadius: 16, border: "1px solid #E5E7EB", overflow: "hidden" }}>
+                      <div style={{ padding: "20px 24px", borderBottom: "1px solid #F3F4F6", display: "flex", justifyContent: "space-between", alignItems: "center" }}>
+                        <div>
+                          <div style={{ fontFamily: "'Orbitron', sans-serif", fontWeight: 900, fontSize: 16, color: "#111827" }}>Order #{order.order_code}</div>
+                          <div style={{ fontSize: 13, color: "#6B7280", marginTop: 4 }}>{order.date} · {order.no_of_items} item(s)</div>
+                        </div>
+                        <div style={{ ...orderStatusStyle(order.status), padding: "6px 14px", borderRadius: 8, fontSize: 13, fontWeight: 700 }}>{order.status}</div>
                       </div>
-                      <div style={{ flex: 1 }}>
-                        <div style={{ fontWeight: 700, color: "#111827" }}>{item.name}</div>
-                        <div style={{ fontSize: 13, color: "#6B7280" }}>Qty: {item.qty}</div>
+                      {order.items.map((item, idx) => (
+                        <div key={idx} style={{ padding: "16px 24px", borderBottom: "1px solid #F3F4F6", display: "flex", alignItems: "center", gap: 16 }}>
+                          <div style={{ flex: 1 }}>
+                            <div style={{ fontWeight: 700, color: "#111827" }}>{item.name}</div>
+                            <div style={{ fontSize: 13, color: "#6B7280" }}>Qty: {item.quantity}</div>
+                          </div>
+                          <div style={{ fontFamily: "'Orbitron', sans-serif", fontWeight: 900, color: "#1D4ED8", fontSize: 15 }}>{formatCurrency(item.price * item.quantity)}</div>
+                        </div>
+                      ))}
+                      <div style={{ padding: "16px 24px", background: "#F8FAFF", display: "flex", justifyContent: "flex-end", fontWeight: 700, color: "#111827" }}>
+                        Total: <span style={{ fontFamily: "'Orbitron', sans-serif", color: "#1D4ED8", marginLeft: 8 }}>{formatCurrency(order.total)}</span>
                       </div>
-                      <div style={{ fontFamily: "'Orbitron', sans-serif", fontWeight: 900, color: "#1D4ED8", fontSize: 15 }}>{formatCurrency(item.price * item.qty)}</div>
                     </div>
                   ))}
-                  <div style={{ padding: "16px 24px", background: "#F8FAFF", display: "flex", justifyContent: "flex-end", gap: 8 }}>
-                    <button style={{ ...STYLES.btnOutline, padding: "8px 16px", fontSize: 13 }} onClick={() => { setCheckoutStep(5); setPage("checkout"); }}>After-Sales</button>
-                  </div>
                 </div>
               ) : (
                 <div style={{ textAlign: "center", padding: "80px 0", color: "#6B7280" }}>
@@ -1606,13 +1465,15 @@ const CustomerPortal: React.FC<CustomerPortalProps> = ({ currentUser, cart, wish
                 </div>
               ) : (
                 <div style={{ display: "grid", gridTemplateColumns: "repeat(auto-fill, minmax(240px, 1fr))", gap: 16 }}>
-                  {PRODUCTS.filter(p => wishlist.includes(p.id)).map(p => (
+                  {products.filter(p => wishlist.includes(p.id)).map(p => (
                     <div key={p.id} style={{ background: "#fff", borderRadius: 16, border: "1px solid #E5E7EB", overflow: "hidden" }}>
-                      <div style={{ background: "linear-gradient(135deg, #EFF6FF, #F0F9FF)", height: 120, display: "flex", alignItems: "center", justifyContent: "center", fontSize: 56 }}>{p.img}</div>
+                      <div style={{ background: "linear-gradient(135deg, #EFF6FF, #F0F9FF)", height: 120, display: "flex", alignItems: "center", justifyContent: "center", fontSize: 56, overflow: "hidden" }}>
+                        <ProductVisual src={p.img} size={56} />
+                      </div>
                       <div style={{ padding: "16px" }}>
                         <div style={{ fontWeight: 700, color: "#111827", marginBottom: 4, fontSize: 14 }}>{p.name}</div>
                         <div style={{ fontFamily: "'Orbitron', sans-serif", fontSize: 18, fontWeight: 900, color: "#1D4ED8", marginBottom: 14 }}>{formatCurrency(p.price)}</div>
-                        <button style={{ ...STYLES.btn, width: "100%", padding: "10px", fontSize: 13 }}>Add to Cart</button>
+                        <button style={{ ...STYLES.btn, width: "100%", padding: "10px", fontSize: 13 }} onClick={() => setPage("browse")}>Browse Store</button>
                       </div>
                     </div>
                   ))}
@@ -1719,17 +1580,19 @@ const pagePaths: Record<StorefrontPage, string> = {
 };
 
 export function NexVoltStorefront({ initialPage = "landing", productId, listings = [] }: NexVoltStorefrontProps) {
-  const { auth } = usePage<{ auth?: { user?: ServerUser | null } }>().props;
+  const { auth } = usePage<{ auth?: { user?: ServerUser | null; orders?: ServerOrder[] } }>().props;
   const authenticatedCustomer = toCustomerUser(auth?.user);
-  const listingProducts = listings.length > 0 ? listings.map(listingToProduct) : PRODUCTS;
+  const customerOrders = auth?.orders ?? [];
+  const listingProducts = listings.map(listingToProduct);
+  const categories = ["All", ...Array.from(new Set(listingProducts.map(p => p.category)))];
   const [page, setPageState] = useState<StorefrontPage>(initialPage);
-  const [cart, setCart] = useState<CartItem[]>([]);
+  const [cart, setCart] = useState<CartItem[]>(() => loadStored<CartItem[]>(STORAGE_KEYS.cart, []));
   const [completedCart, setCompletedCart] = useState<CartItem[]>([]);
-  const [wishlist, setWishlist] = useState<number[]>([]);
+  const [wishlist, setWishlist] = useState<number[]>(() => loadStored<number[]>(STORAGE_KEYS.wishlist, []));
   const [selectedProduct, setSelectedProductState] = useState<Product | null>(() => {
-    if (initialPage !== "product") return null;
+    if (initialPage !== "product" || listingProducts.length === 0) return null;
 
-    return listingProducts.find(product => String(product.id) === String(productId ?? listingProducts[0].id)) ?? listingProducts[0];
+    return listingProducts.find(product => String(product.id) === String(productId)) ?? listingProducts[0];
   });
   const [category, setCategory] = useState<string>("All");
   const [search, setSearch] = useState<string>("");
@@ -1768,6 +1631,13 @@ export function NexVoltStorefront({ initialPage = "landing", productId, listings
   }, []);
 
   const setPage = useCallback((nextPage: StorefrontPage) => {
+    // The portal shows server-backed data (orders, statuses), so fetch a fresh
+    // render from the server instead of switching client-side.
+    if (nextPage === "portal") {
+      router.visit("/account");
+      return;
+    }
+
     navigateToPage(nextPage, selectedProduct);
   }, [navigateToPage, selectedProduct]);
 
@@ -1783,6 +1653,10 @@ export function NexVoltStorefront({ initialPage = "landing", productId, listings
     const t = setInterval(() => setHeroIndex(h => (h + 1) % Math.max(heroProducts.length, 1)), 4000);
     return () => clearInterval(t);
   }, [heroProducts.length]);
+
+  // Persist cart + wishlist so they survive navigation and refresh.
+  useEffect(() => { saveStored(STORAGE_KEYS.cart, cart); }, [cart]);
+  useEffect(() => { saveStored(STORAGE_KEYS.wishlist, wishlist); }, [wishlist]);
 
   const notify = useCallback((msg: string, type: "success" | "error" = "success") => {
     setNotification({ msg, type });
@@ -1836,6 +1710,7 @@ export function NexVoltStorefront({ initialPage = "landing", productId, listings
           payment_method: selectedPaymentMethod,
           items: cart.map(item => ({
             listing_id: item.listingId ?? item.id,
+            kind: item.kind,
             quantity: item.qty,
           })),
         }),
@@ -1900,7 +1775,7 @@ export function NexVoltStorefront({ initialPage = "landing", productId, listings
   if (page === "portal" && currentUser) return (
     <>
       <Notification notification={notification} />
-      <CustomerPortal currentUser={currentUser} cart={cart} wishlist={wishlist} orderNum={orderNum}
+      <CustomerPortal currentUser={currentUser} cart={cart} wishlist={wishlist} products={listingProducts} orders={customerOrders}
         setCurrentUser={handleSetCurrentUser} setPage={setPage} setCheckoutStep={setCheckoutStep} notify={notify} />
     </>
   );
@@ -1911,25 +1786,25 @@ export function NexVoltStorefront({ initialPage = "landing", productId, listings
       <Notification notification={notification} />
 
       {page === "landing" && (
-        <LandingPage heroIndex={safeHeroIndex} heroProducts={heroProducts} products={listingProducts} setHeroIndex={setHeroIndex}
+        <LandingPage heroIndex={safeHeroIndex} heroProducts={heroProducts} products={listingProducts} categories={categories} setHeroIndex={setHeroIndex}
           wishlist={wishlist} addToCart={addToCart} toggleWishlist={toggleWishlist}
           setSelectedProduct={setSelectedProduct} setPage={setPage} setCategory={setCategory} />
       )}
 
       {page === "browse" && (
-        <BrowsePage search={search} category={category} sort={sort} products={listingProducts} setCategory={setCategory} setSort={setSort}
+        <BrowsePage search={search} category={category} sort={sort} products={listingProducts} categories={categories} setCategory={setCategory} setSort={setSort}
           wishlist={wishlist} addToCart={addToCart} toggleWishlist={toggleWishlist}
           setSelectedProduct={setSelectedProduct} setPage={setPage} />
       )}
 
       {page === "product" && selectedProduct && (
-        <ProductPage product={selectedProduct} wishlist={wishlist} quantity={quantity} setQuantity={setQuantity}
-          review={review} setReview={setReview} addToCart={addToCart} toggleWishlist={toggleWishlist}
-          setSelectedProduct={setSelectedProduct} setPage={setPage} setCheckoutStep={setCheckoutStep} notify={notify} />
+        <ProductPage product={selectedProduct} relatedProducts={listingProducts.filter(pr => pr.id !== selectedProduct.id).slice(0, 4)} wishlist={wishlist} quantity={quantity} setQuantity={setQuantity}
+          addToCart={addToCart} toggleWishlist={toggleWishlist}
+          setSelectedProduct={setSelectedProduct} setPage={setPage} setCheckoutStep={setCheckoutStep} />
       )}
 
       {page === "wishlist" && (
-        <WishlistPage wishlist={wishlist} toggleWishlist={toggleWishlist} addToCart={addToCart} setPage={setPage} />
+        <WishlistPage wishlist={wishlist} products={listingProducts} toggleWishlist={toggleWishlist} addToCart={addToCart} setPage={setPage} />
       )}
 
       {page === "checkout" && (

@@ -9,15 +9,11 @@ use App\Http\Controllers\PcBuildController;
 use App\Http\Controllers\ProductCategoryController;
 use App\Http\Controllers\ProductController;
 use App\Http\Controllers\ProductListingController;
-use App\Models\ProductListing;
+use App\Services\StorefrontService;
 use Illuminate\Support\Facades\Route;
 use Inertia\Inertia;
 
-$publishedListings = fn () => ProductListing::query()
-    ->with('product.categories')
-    ->where('is_published', true)
-    ->latest()
-    ->get();
+$publishedListings = fn () => app(StorefrontService::class)->publishedListings();
 
 Route::get('/', fn () => Inertia::render('storefront/landing', [
     'listings' => $publishedListings(),
@@ -44,7 +40,7 @@ Route::post('/checkout/orders', [CheckoutController::class, 'store'])
     ->middleware('auth')
     ->name('storefront.checkout.orders.store');
 
-Route::middleware('guest')->group(function () {
+Route::middleware('guest')->group(function () use ($publishedListings) {
     Route::get('/account/login', fn () => Inertia::render('storefront/login', [
         'listings' => $publishedListings(),
     ]))->name('storefront.login');

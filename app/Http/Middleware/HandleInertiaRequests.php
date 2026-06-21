@@ -2,6 +2,7 @@
 
 namespace App\Http\Middleware;
 
+use App\Services\OrderService;
 use Illuminate\Http\Request;
 use Inertia\Middleware;
 
@@ -46,6 +47,9 @@ class HandleInertiaRequests extends Middleware
             'name' => config('app.name'),
             'auth' => [
                 'user' => $user,
+                'orders' => $user && $user->role === 'customer'
+                    ? fn () => app(OrderService::class)->forCustomer($user->id)
+                    : [],
             ],
             'flash' => [
                 'success' => fn () => $request->session()->get('success'),

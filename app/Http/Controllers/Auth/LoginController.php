@@ -50,7 +50,7 @@ class LoginController extends Controller
         $request->session()->regenerateToken();
 
         if ($user->role === 'customer') {
-            return redirect('/account/login');
+            return redirect('/');
         }
 
         return redirect('admin');

@@ -59,6 +59,31 @@ class OrderService
 
     }
 
+    public function forCustomer(int $customerId): array
+    {
+        return Order::query()
+            ->with('items')
+            ->where('customer_id', $customerId)
+            ->latest()
+            ->get()
+            ->map(function ($order) {
+                return [
+                    'id' => $order->id,
+                    'order_code' => sprintf('NV-%05d', $order->id),
+                    'status' => ucwords($order->status),
+                    'total' => (float) $order->total,
+                    'no_of_items' => (int) $order->items->sum('quantity'),
+                    'date' => $order->created_at?->format('M d, Y'),
+                    'items' => $order->items->map(fn ($item) => [
+                        'name' => $item->product_name_snapshot,
+                        'quantity' => (int) $item->quantity,
+                        'price' => (float) $item->unit_price_snapshot,
+                    ])->values(),
+                ];
+            })
+            ->all();
+    }
+
     public function updateStatus(Order $order, string $status): Order
     {
         $status = strtolower($status);
