@@ -1,18 +1,8 @@
 "use client"
 
 import * as React from "react"
-import {
-  CreditCard,
-  GalleryVerticalEnd,
-  LayoutDashboard,
-  Package,
-  Tags,
-  ClipboardList,
-  ShoppingCart,
-  ToolCase,
-  Users,
-  Monitor,
-} from "lucide-react"
+import { GalleryVerticalEnd } from "lucide-react"
+import { usePage } from "@inertiajs/react"
 
 import { NavUser } from "@/components/nav-user"
 import {
@@ -25,59 +15,81 @@ import {
 
 import { NavMenu } from "./nav-menu"
 
-const data = {
-  overview: [
-    {
-      name: "📊 Dashboard",
-      url: "/admin/dashboard",
-    },
-  ],
+type NavItem = { name: string; url: string }
+type NavGroup = { title: string; items: NavItem[] }
 
-  operations: [
-    {
-      name: "🛒 Orders",
-      url: "/admin/orders",
-    },
-    {
-      name: "🖥️ PC Builder",
-      url: "/admin/pc-builder",
-    },
-    {
-      name: "📦 Inventory",
-      url: "/admin/inventory",
-    },
-  ],
+/* Full menu for administrators. */
+const ADMIN_MENU: NavGroup[] = [
+  {
+    title: "Overview",
+    items: [
+      { name: "📊 Dashboard", url: "/admin/dashboard" },
+      { name: "📈 Reports", url: "/admin/reports" },
+    ],
+  },
+  {
+    title: "Operations",
+    items: [
+      { name: "🛒 Orders", url: "/admin/orders" },
+      { name: "🖥️ PC Builder", url: "/admin/pc-builder" },
+      { name: "📦 Inventory", url: "/admin/inventory" },
+    ],
+  },
+  {
+    title: "Catalog",
+    items: [
+      { name: "💻 Products", url: "/admin/products" },
+      { name: "🏷️ Categories", url: "/admin/categories" },
+      { name: "📋 Listings", url: "/admin/listings" },
+    ],
+  },
+  {
+    title: "Finance",
+    items: [
+      { name: "💳 Payments & Billing", url: "/admin/payments-and-billing" },
+      { name: "👥 Customers", url: "/admin/customers" },
+    ],
+  },
+  {
+    title: "Administration",
+    items: [
+      { name: "🧑‍💼 User Management", url: "/admin/users" },
+    ],
+  },
+]
 
-  catalog: [
-    {
-      name: "💻 Products",
-      url: "/admin/products",
-    },
-    {
-      name: "🏷️ Categories",
-      url: "/admin/categories",
-    },
-    {
-      name: "📋 Listings",
-      url: "/admin/listings",
-    },
-  ],
+/* Narrower menu for staff: operational pages only. */
+const STAFF_MENU: NavGroup[] = [
+  {
+    title: "Overview",
+    items: [
+      { name: "📊 Dashboard", url: "/admin/dashboard" },
+      { name: "📈 Reports", url: "/admin/reports" },
+    ],
+  },
+  {
+    title: "Operations",
+    items: [
+      { name: "🛒 Orders", url: "/admin/orders" },
+      { name: "📦 Inventory", url: "/admin/inventory" },
+    ],
+  },
+]
 
-  finance: [
-    {
-      name: "💳 Payments & Billing",
-      url: "/admin/payments-and-billing",
-    },
-    {
-      name: "👥 Customers",
-      url: "/admin/customers",
-    },
-  ],
+type PageProps = {
+  auth?: { user?: { role?: string } | null }
 }
 
 export function AppSidebar({
   ...props
 }: React.ComponentProps<typeof Sidebar>) {
+  const { auth } = usePage<PageProps>().props
+  const role = auth?.user?.role ?? "staff"
+  const isStaff = role === "staff"
+
+  const menu = isStaff ? STAFF_MENU : ADMIN_MENU
+  const portalLabel = isStaff ? "Staff Portal" : "Admin Portal"
+
   return (
     <Sidebar collapsible="icon" {...props}>
       <SidebarHeader>
@@ -87,37 +99,16 @@ export function AppSidebar({
           </div>
 
           <div className="grid flex-1 text-left text-sm leading-tight">
-            <span className="truncate font-medium">
-              E-commerce
-            </span>
-
-            <span className="truncate text-xs">
-              Admin Portal
-            </span>
+            <span className="truncate font-medium">E-commerce</span>
+            <span className="truncate text-xs">{portalLabel}</span>
           </div>
         </div>
       </SidebarHeader>
 
       <SidebarContent>
-        <NavMenu
-          title="Overview"
-          items={data.overview}
-        />
-
-        <NavMenu
-          title="Operations"
-          items={data.operations}
-        />
-
-        <NavMenu
-          title="Catalog"
-          items={data.catalog}
-        />
-
-        <NavMenu
-          title="Finance"
-          items={data.finance}
-        />
+        {menu.map((group) => (
+          <NavMenu key={group.title} title={group.title} items={group.items} />
+        ))}
       </SidebarContent>
 
       <SidebarFooter>

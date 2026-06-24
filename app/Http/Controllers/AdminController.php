@@ -11,6 +11,8 @@ use App\Services\PcBuildService;
 use App\Services\ProductCategoryService;
 use App\Services\ProductListingService;
 use App\Services\ProductService;
+use App\Services\ReportService;
+use App\Services\UserService;
 use Illuminate\Http\Request;
 use Inertia\Inertia;
 
@@ -24,6 +26,24 @@ class AdminController extends Controller
     public function dashboard(Request $request, DashboardService $dashboard)
     {
         return Inertia::render('admin/dashboard', $dashboard->metrics());
+    }
+
+    public function reports(Request $request, ReportService $report)
+    {
+        return Inertia::render('admin/reports', $report->generate());
+    }
+
+    public function users(Request $request, UserService $user)
+    {
+        $perPage = $request->integer('per_page', 25);
+        $perPage = in_array($perPage, [10, 25, 50, 100], true) ? $perPage : 25;
+        $search = $request->string('search')->trim()->toString();
+        $role = $request->string('role', 'all')->trim()->toString();
+
+        $stats = $user->stats();
+        $users = $user->paginate($perPage, $search ?: null, $role ?: 'all');
+
+        return Inertia::render('admin/users', compact('users', 'stats'));
     }
 
     public function inventory(

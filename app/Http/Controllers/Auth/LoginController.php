@@ -31,6 +31,14 @@ class LoginController extends Controller
             ]);
         }
 
+        if (! Auth::user()->is_active) {
+            Auth::guard('web')->logout();
+
+            throw ValidationException::withMessages([
+                'email' => 'This account has been deactivated. Please contact an administrator.',
+            ]);
+        }
+
         $request->session()->regenerate();
 
         if (Auth::user()->role === 'customer') {

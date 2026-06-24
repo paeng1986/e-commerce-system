@@ -31,7 +31,7 @@ return Application::configure(basePath: dirname(__DIR__))
             }
 
             if ($user->role === 'customer') {
-                return '/portal';
+                return '/account';
             }
 
             return '/admin/dashboard';
@@ -39,6 +39,7 @@ return Application::configure(basePath: dirname(__DIR__))
 
         $middleware->alias([
             'admin' => \App\Http\Middleware\AdminMiddleware::class,
+            'staff' => \App\Http\Middleware\StaffMiddleware::class,
         ]);
     })
     ->withExceptions(function (Exceptions $exceptions): void {

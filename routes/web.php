@@ -9,6 +9,7 @@ use App\Http\Controllers\PcBuildController;
 use App\Http\Controllers\ProductCategoryController;
 use App\Http\Controllers\ProductController;
 use App\Http\Controllers\ProductListingController;
+use App\Http\Controllers\UserController;
 use App\Services\StorefrontService;
 use Illuminate\Support\Facades\Route;
 use Inertia\Inertia;
@@ -73,22 +74,50 @@ Route::controller(AdminController::class)
         Route::get('/', 'index')->name('admin');
     });
 
+/*
+ | Shared back-office area (admin, super-admin, staff): operational pages
+ | the Staff Portal needs — dashboard, orders, inventory, reports.
+ */
+Route::controller(AdminController::class)
+    ->middleware(['auth','staff'])
+    ->prefix('admin')
+    ->group(function () {
+
+        Route::get('/dashboard', 'dashboard')->name('dashboard');
+        Route::get('/orders', 'orders')->name('orders');
+        Route::put('/orders/{order}/status', 'updateOrderStatus')->name('orders.status.update');
+        Route::get('/inventory', 'inventory')->name('inventory');
+        Route::get('/reports', 'reports')->name('reports');
+
+    });
+
+// Staff may adjust on-hand stock (inventory monitoring + updates).
+Route::controller(ProductController::class)
+    ->middleware(['auth','staff'])
+    ->prefix('admin')
+    ->group(function () {
+
+        Route::put('/inventory/{id}/stock', 'adjustStock')->name('inventory.stock.update');
+
+    });
+
+/*
+ | Management area (admin / super-admin only): catalog, customers, users,
+ | finance and PC builder.
+ */
 Route::controller(AdminController::class)
     ->middleware(['auth','admin'])
     ->prefix('admin')
     ->group(function () {
 
-        Route::get('/dashboard', 'dashboard')->name('dashboard');
         Route::get('/customers', 'customers')->name('customers');
         Route::get('/categories', 'categories')->name('categories');
-        Route::get('/orders', 'orders')->name('orders');
-        Route::put('/orders/{order}/status', 'updateOrderStatus')->name('orders.status.update');
         Route::get('/payments-and-billing', 'payments_billing')->name('payments-and-billing');
-        Route::get('/inventory', 'inventory')->name('inventory');
         Route::get('/products', 'products')->name('products');
         Route::get('/listings', 'listings')->name('listings');
         Route::get('/listing/{id}', 'listing')->name('listing');
         Route::get('/pc-builder', 'pc_builder')->name('pc_builder');
+        Route::get('/users', 'users')->name('users');
 
     });
 
@@ -110,9 +139,18 @@ Route::controller(ProductController::class)
         Route::get('/products/template', 'downloadTemplate');
         Route::post('/product', 'store');
         Route::put('/product/{id}', 'update');
-        Route::put('/inventory/{id}/stock', 'adjustStock')->name('inventory.stock.update');
 
         Route::post('/products/bulk-upload', 'bulkUpload');
+
+    });
+
+Route::controller(UserController::class)
+    ->middleware(['auth','admin'])
+    ->prefix('admin')
+    ->group(function () {
+
+        Route::post('/user', 'store')->name('user.store');
+        Route::put('/users/{user}/toggle-active', 'toggleActive')->name('user.toggle-active');
 
     });
 
