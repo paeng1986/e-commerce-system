@@ -2,9 +2,9 @@
 
 use App\Http\Controllers\AdminController;
 use App\Http\Controllers\Auth\CustomerAuthController;
+use App\Http\Controllers\Auth\LoginController;
 use App\Http\Controllers\CheckoutController;
 use App\Http\Controllers\CustomerController;
-use App\Http\Controllers\Auth\LoginController;
 use App\Http\Controllers\PcBuildController;
 use App\Http\Controllers\ProductCategoryController;
 use App\Http\Controllers\ProductController;
@@ -79,7 +79,7 @@ Route::controller(AdminController::class)
  | the Staff Portal needs — dashboard, orders, inventory, reports.
  */
 Route::controller(AdminController::class)
-    ->middleware(['auth','staff'])
+    ->middleware(['auth', 'staff'])
     ->prefix('admin')
     ->group(function () {
 
@@ -87,13 +87,14 @@ Route::controller(AdminController::class)
         Route::get('/orders', 'orders')->name('orders');
         Route::put('/orders/{order}/status', 'updateOrderStatus')->name('orders.status.update');
         Route::get('/inventory', 'inventory')->name('inventory');
+        Route::get('/reports/export/{type}', 'exportReport')->name('reports.export');
         Route::get('/reports', 'reports')->name('reports');
 
     });
 
 // Staff may adjust on-hand stock (inventory monitoring + updates).
 Route::controller(ProductController::class)
-    ->middleware(['auth','staff'])
+    ->middleware(['auth', 'staff'])
     ->prefix('admin')
     ->group(function () {
 
@@ -106,7 +107,7 @@ Route::controller(ProductController::class)
  | finance and PC builder.
  */
 Route::controller(AdminController::class)
-    ->middleware(['auth','admin'])
+    ->middleware(['auth', 'admin'])
     ->prefix('admin')
     ->group(function () {
 
@@ -122,7 +123,7 @@ Route::controller(AdminController::class)
     });
 
 Route::controller(ProductCategoryController::class)
-    ->middleware(['auth','admin'])
+    ->middleware(['auth', 'admin'])
     ->prefix('admin')
     ->group(function () {
 
@@ -132,7 +133,7 @@ Route::controller(ProductCategoryController::class)
     });
 
 Route::controller(ProductController::class)
-    ->middleware(['auth','admin'])
+    ->middleware(['auth', 'admin'])
     ->prefix('admin')
     ->group(function () {
 
@@ -145,7 +146,7 @@ Route::controller(ProductController::class)
     });
 
 Route::controller(UserController::class)
-    ->middleware(['auth','admin'])
+    ->middleware(['auth', 'admin'])
     ->prefix('admin')
     ->group(function () {
 
@@ -155,7 +156,7 @@ Route::controller(UserController::class)
     });
 
 Route::controller(ProductListingController::class)
-    ->middleware(['auth','admin'])
+    ->middleware(['auth', 'admin'])
     ->prefix('admin')
     ->group(function () {
 
@@ -164,7 +165,7 @@ Route::controller(ProductListingController::class)
     });
 
 Route::controller(PcBuildController::class)
-    ->middleware(['auth','admin'])
+    ->middleware(['auth', 'admin'])
     ->prefix('admin')
     ->group(function () {
 
@@ -174,7 +175,7 @@ Route::controller(PcBuildController::class)
     });
 
 Route::controller(CustomerController::class)
-    ->middleware(['auth','admin'])
+    ->middleware(['auth', 'admin'])
     ->prefix('admin')
     ->group(function () {
 

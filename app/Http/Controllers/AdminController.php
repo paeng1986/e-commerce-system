@@ -30,7 +30,28 @@ class AdminController extends Controller
 
     public function reports(Request $request, ReportService $report)
     {
-        return Inertia::render('admin/reports', $report->generate());
+        return Inertia::render('admin/reports', $report->generate($request->only(['start_date', 'end_date'])));
+    }
+
+    public function exportReport(string $type, Request $request, ReportService $report)
+    {
+        abort_unless(in_array($type, ReportService::EXPORT_TYPES, true), 404);
+
+        [$header, $rows] = $report->export($type, $request->only(['start_date', 'end_date']));
+        $filename = "report-{$type}-".now()->format('Ymd-His').'.csv';
+
+        return response()->streamDownload(function () use ($header, $rows) {
+            $handle = fopen('php://output', 'w');
+            fputcsv($handle, $header);
+
+            foreach ($rows as $row) {
+                fputcsv($handle, array_values($row));
+            }
+
+            fclose($handle);
+        }, $filename, [
+            'Content-Type' => 'text/csv',
+        ]);
     }
 
     public function users(Request $request, UserService $user)
@@ -194,8 +215,7 @@ class AdminController extends Controller
         Request $request,
         ProductService $product,
         PcBuildService $pcBuild
-    )
-    {
+    ) {
         $products = $product->get();
         $builds = $pcBuild->get();
 
