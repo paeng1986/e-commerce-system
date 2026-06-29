@@ -110,6 +110,16 @@ interface ServerOrder {
   items: { name: string; quantity: number; price: number }[];
 }
 
+interface ServerNotification {
+  id: number;
+  type: string;
+  title: string;
+  message: string;
+  order_id?: number | null;
+  read_at?: string | null;
+  created_label?: string | null;
+}
+
 export type StorefrontPage = "landing" | "browse" | "product" | "wishlist" | "checkout" | "login" | "register" | "portal";
 type PaymentMethod = "cod" | "gcash" | "bank_transfer";
 
@@ -1284,19 +1294,22 @@ interface CustomerPortalProps {
   wishlist: number[];
   products: Product[];
   orders: ServerOrder[];
+  notifications: ServerNotification[];
+  unreadNotifications: number;
   setCurrentUser: (u: User | null) => void;
   setPage: (p: StorefrontPage) => void;
   setCheckoutStep: (s: number) => void;
   notify: (msg: string, type?: "success" | "error") => void;
 }
-const CustomerPortal: React.FC<CustomerPortalProps> = ({ currentUser, cart, wishlist, products, orders, setCurrentUser, setPage, setCheckoutStep, notify }) => {
-  const [activeTab, setActiveTab] = useState<"overview" | "orders" | "wishlist" | "settings">("overview");
+const CustomerPortal: React.FC<CustomerPortalProps> = ({ currentUser, cart, wishlist, products, orders, notifications, unreadNotifications, setCurrentUser, setPage, setCheckoutStep, notify }) => {
+  const [activeTab, setActiveTab] = useState<"overview" | "orders" | "notifications" | "wishlist" | "settings">("overview");
   const [editMode, setEditMode] = useState(false);
   const [editName, setEditName] = useState(currentUser.firstName);
 
   const tabs = [
     { id: "overview", label: "Overview", icon: "🏠" },
     { id: "orders", label: "My Orders", icon: "📦" },
+    { id: "notifications", label: `Notifications${unreadNotifications ? ` (${unreadNotifications})` : ""}`, icon: "!" },
     { id: "wishlist", label: "Saved Items", icon: "♡" },
     { id: "settings", label: "Settings", icon: "⚙️" },
   ] as const;
@@ -1304,6 +1317,13 @@ const CustomerPortal: React.FC<CustomerPortalProps> = ({ currentUser, cart, wish
   const handleLogout = () => {
     setCurrentUser(null);
     router.post("/logout");
+  };
+
+  const markNotificationsRead = () => {
+    router.put("/notifications/read", {}, {
+      preserveScroll: true,
+      onSuccess: () => notify("Notifications marked as read."),
+    });
   };
 
   return (
@@ -1452,6 +1472,46 @@ const CustomerPortal: React.FC<CustomerPortalProps> = ({ currentUser, cart, wish
             </div>
           )}
 
+          {/* NOTIFICATIONS TAB */}
+          {activeTab === "notifications" && (
+            <div>
+              <div style={{ display: "flex", justifyContent: "space-between", alignItems: "flex-start", gap: 16, marginBottom: 32 }}>
+                <div>
+                  <h1 style={{ fontFamily: "'Orbitron', sans-serif", fontSize: 24, fontWeight: 900, color: "#0A0F1E", marginBottom: 8 }}>Notifications</h1>
+                  <p style={{ color: "#6B7280" }}>Order confirmations, delivery updates, and store announcements.</p>
+                </div>
+                <button style={STYLES.btnOutline} onClick={markNotificationsRead}>Mark all read</button>
+              </div>
+              {notifications.length > 0 ? (
+                <div style={{ display: "flex", flexDirection: "column", gap: 14 }}>
+                  {notifications.map(item => (
+                    <div key={item.id} style={{ background: "#fff", borderRadius: 16, border: item.read_at ? "1px solid #E5E7EB" : "1px solid #93C5FD", padding: "20px 24px", display: "flex", gap: 16 }}>
+                      <div style={{ width: 42, height: 42, borderRadius: 12, background: item.read_at ? "#F3F4F6" : "#EFF6FF", color: item.read_at ? "#6B7280" : "#1D4ED8", display: "flex", alignItems: "center", justifyContent: "center", fontWeight: 900 }}>
+                        {item.type === "announcement" ? "A" : item.type === "delivery_update" ? "D" : "O"}
+                      </div>
+                      <div style={{ flex: 1 }}>
+                        <div style={{ display: "flex", alignItems: "center", gap: 10, flexWrap: "wrap", marginBottom: 6 }}>
+                          <div style={{ fontWeight: 800, color: "#111827" }}>{item.title}</div>
+                          {!item.read_at && (
+                            <span style={{ background: "#DBEAFE", color: "#1D4ED8", borderRadius: 999, padding: "3px 8px", fontSize: 11, fontWeight: 800 }}>Unread</span>
+                          )}
+                        </div>
+                        <div style={{ color: "#4B5563", fontSize: 14, lineHeight: 1.6 }}>{item.message}</div>
+                        <div style={{ marginTop: 10, color: "#9CA3AF", fontSize: 12 }}>{item.created_label || "Just now"}</div>
+                      </div>
+                    </div>
+                  ))}
+                </div>
+              ) : (
+                <div style={{ textAlign: "center", padding: "80px 0", color: "#6B7280" }}>
+                  <div style={{ fontSize: 56, marginBottom: 16 }}>!</div>
+                  <div style={{ fontSize: 18, fontWeight: 700, marginBottom: 8 }}>No notifications yet</div>
+                  <div>Order and announcement updates will appear here.</div>
+                </div>
+              )}
+            </div>
+          )}
+
           {/* WISHLIST TAB */}
           {activeTab === "wishlist" && (
             <div>
@@ -1580,9 +1640,11 @@ const pagePaths: Record<StorefrontPage, string> = {
 };
 
 export function NexVoltStorefront({ initialPage = "landing", productId, listings = [] }: NexVoltStorefrontProps) {
-  const { auth } = usePage<{ auth?: { user?: ServerUser | null; orders?: ServerOrder[] } }>().props;
+  const { auth } = usePage<{ auth?: { user?: ServerUser | null; orders?: ServerOrder[]; notifications?: ServerNotification[]; unread_notifications?: number } }>().props;
   const authenticatedCustomer = toCustomerUser(auth?.user);
   const customerOrders = auth?.orders ?? [];
+  const customerNotifications = auth?.notifications ?? [];
+  const unreadNotifications = auth?.unread_notifications ?? 0;
   const listingProducts = listings.map(listingToProduct);
   const categories = ["All", ...Array.from(new Set(listingProducts.map(p => p.category)))];
   const [page, setPageState] = useState<StorefrontPage>(initialPage);
@@ -1776,6 +1838,7 @@ export function NexVoltStorefront({ initialPage = "landing", productId, listings
     <>
       <Notification notification={notification} />
       <CustomerPortal currentUser={currentUser} cart={cart} wishlist={wishlist} products={listingProducts} orders={customerOrders}
+        notifications={customerNotifications} unreadNotifications={unreadNotifications}
         setCurrentUser={handleSetCurrentUser} setPage={setPage} setCheckoutStep={setCheckoutStep} notify={notify} />
     </>
   );

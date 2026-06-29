@@ -94,7 +94,8 @@ class OrderService
             ]);
         }
 
-        return DB::transaction(function () use ($order, $status) {
+        $oldStatus = strtolower($order->status);
+        $updated = DB::transaction(function () use ($order, $status) {
             $order = Order::query()
                 ->with('items')
                 ->lockForUpdate()
@@ -128,6 +129,12 @@ class OrderService
 
             return $order->load(['items', 'customer']);
         });
+
+        if ($oldStatus !== strtolower($updated->status)) {
+            app(NotificationService::class)->notifyOrderStatusChanged($updated, $oldStatus, strtolower($updated->status));
+        }
+
+        return $updated;
     }
 
     public function decrementProductStock(Order $order): void

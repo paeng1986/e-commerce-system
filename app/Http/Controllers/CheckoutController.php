@@ -6,6 +6,7 @@ use App\Models\Order;
 use App\Models\Payment;
 use App\Models\PcBuildListing;
 use App\Models\ProductListing;
+use App\Services\NotificationService;
 use Illuminate\Http\JsonResponse;
 use Illuminate\Http\Request;
 use Illuminate\Support\Facades\DB;
@@ -13,7 +14,7 @@ use Illuminate\Validation\ValidationException;
 
 class CheckoutController extends Controller
 {
-    public function store(Request $request): JsonResponse
+    public function store(Request $request, NotificationService $notifications): JsonResponse
     {
         $data = $request->validate([
             'items' => ['required', 'array', 'min:1'],
@@ -146,6 +147,7 @@ class CheckoutController extends Controller
         });
 
         [$order, $payment] = $created;
+        $notifications->notifyOrderConfirmed($order);
 
         return response()->json([
             'order' => [

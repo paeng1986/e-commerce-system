@@ -1,9 +1,7 @@
 import {
-  IconCreditCard,
   IconDotsVertical,
   IconLogout,
   IconNotification,
-  IconUserCircle,
 } from "@tabler/icons-react"
 
 import {
@@ -37,6 +35,7 @@ type UserProps = {
 type PageProps = {
   auth: {
     user: UserProps
+    unread_notifications?: number
   }
 }
 
@@ -46,6 +45,7 @@ export function NavUser() {
   const { isMobile } = useSidebar()
   const { auth } = usePage<PageProps>().props
   const user = auth.user
+  const unread = auth.unread_notifications ?? 0
 
   return (
     <SidebarMenu>
@@ -91,9 +91,16 @@ export function NavUser() {
             </DropdownMenuLabel>
             <DropdownMenuSeparator />
             <DropdownMenuGroup>
-              <DropdownMenuItem>
-                <IconUserCircle />
-                Account
+              <DropdownMenuItem asChild>
+                <Link href="/admin/notifications" className="w-full flex items-center gap-2">
+                  <IconNotification />
+                  Notifications
+                  {unread > 0 && (
+                    <span className="ml-auto rounded-full bg-primary px-2 py-0.5 text-xs text-primary-foreground">
+                      {unread}
+                    </span>
+                  )}
+                </Link>
               </DropdownMenuItem>
             </DropdownMenuGroup>
             <DropdownMenuSeparator />

@@ -2,6 +2,7 @@
 
 namespace App\Http\Middleware;
 
+use App\Services\NotificationService;
 use App\Services\OrderService;
 use Illuminate\Http\Request;
 use Inertia\Middleware;
@@ -50,6 +51,12 @@ class HandleInertiaRequests extends Middleware
                 'orders' => $user && $user->role === 'customer'
                     ? fn () => app(OrderService::class)->forCustomer($user->id)
                     : [],
+                'notifications' => $user
+                    ? fn () => app(NotificationService::class)->feedFor($user)
+                    : [],
+                'unread_notifications' => $user
+                    ? fn () => app(NotificationService::class)->unreadCount($user)
+                    : 0,
             ],
             'flash' => [
                 'success' => fn () => $request->session()->get('success'),

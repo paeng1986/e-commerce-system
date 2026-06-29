@@ -18,60 +18,60 @@ import { NavMenu } from "./nav-menu"
 type NavItem = { name: string; url: string }
 type NavGroup = { title: string; items: NavItem[] }
 
-/* Full menu for administrators. */
 const ADMIN_MENU: NavGroup[] = [
   {
     title: "Overview",
     items: [
-      { name: "📊 Dashboard", url: "/admin/dashboard" },
-      { name: "📈 Reports", url: "/admin/reports" },
+      { name: "Dashboard", url: "/admin/dashboard" },
+      { name: "Reports", url: "/admin/reports" },
+      { name: "Notifications", url: "/admin/notifications" },
     ],
   },
   {
     title: "Operations",
     items: [
-      { name: "🛒 Orders", url: "/admin/orders" },
-      { name: "🖥️ PC Builder", url: "/admin/pc-builder" },
-      { name: "📦 Inventory", url: "/admin/inventory" },
+      { name: "Orders", url: "/admin/orders" },
+      { name: "PC Builder", url: "/admin/pc-builder" },
+      { name: "Inventory", url: "/admin/inventory" },
     ],
   },
   {
     title: "Catalog",
     items: [
-      { name: "💻 Products", url: "/admin/products" },
-      { name: "🏷️ Categories", url: "/admin/categories" },
-      { name: "📋 Listings", url: "/admin/listings" },
+      { name: "Products", url: "/admin/products" },
+      { name: "Categories", url: "/admin/categories" },
+      { name: "Listings", url: "/admin/listings" },
     ],
   },
   {
     title: "Finance",
     items: [
-      { name: "💳 Payments & Billing", url: "/admin/payments-and-billing" },
-      { name: "👥 Customers", url: "/admin/customers" },
+      { name: "Payments & Billing", url: "/admin/payments-and-billing" },
+      { name: "Customers", url: "/admin/customers" },
     ],
   },
   {
     title: "Administration",
     items: [
-      { name: "🧑‍💼 User Management", url: "/admin/users" },
+      { name: "User Management", url: "/admin/users" },
     ],
   },
 ]
 
-/* Narrower menu for staff: operational pages only. */
 const STAFF_MENU: NavGroup[] = [
   {
     title: "Overview",
     items: [
-      { name: "📊 Dashboard", url: "/admin/dashboard" },
-      { name: "📈 Reports", url: "/admin/reports" },
+      { name: "Dashboard", url: "/admin/dashboard" },
+      { name: "Reports", url: "/admin/reports" },
+      { name: "Notifications", url: "/admin/notifications" },
     ],
   },
   {
     title: "Operations",
     items: [
-      { name: "🛒 Orders", url: "/admin/orders" },
-      { name: "📦 Inventory", url: "/admin/inventory" },
+      { name: "Orders", url: "/admin/orders" },
+      { name: "Inventory", url: "/admin/inventory" },
     ],
   },
 ]

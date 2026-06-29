@@ -5,6 +5,7 @@ use App\Http\Controllers\Auth\CustomerAuthController;
 use App\Http\Controllers\Auth\LoginController;
 use App\Http\Controllers\CheckoutController;
 use App\Http\Controllers\CustomerController;
+use App\Http\Controllers\NotificationController;
 use App\Http\Controllers\PcBuildController;
 use App\Http\Controllers\ProductCategoryController;
 use App\Http\Controllers\ProductController;
@@ -87,10 +88,16 @@ Route::controller(AdminController::class)
         Route::get('/orders', 'orders')->name('orders');
         Route::put('/orders/{order}/status', 'updateOrderStatus')->name('orders.status.update');
         Route::get('/inventory', 'inventory')->name('inventory');
+        Route::get('/notifications', [NotificationController::class, 'index'])->name('notifications');
+        Route::post('/notifications', [NotificationController::class, 'store'])->name('notifications.store');
         Route::get('/reports/export/{type}', 'exportReport')->name('reports.export');
         Route::get('/reports', 'reports')->name('reports');
 
     });
+
+Route::put('/notifications/read', [NotificationController::class, 'markAllRead'])
+    ->middleware('auth')
+    ->name('notifications.read');
 
 // Staff may adjust on-hand stock (inventory monitoring + updates).
 Route::controller(ProductController::class)
